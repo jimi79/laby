@@ -1,0 +1,27 @@
+we start from the beginning
+we build the string that is the map, to display it in one shot
+we will actually have an array of what is visible, with a color for each cell
+so that will be quick to render : print color of the array
+i should skip black cells though. while color = 0, increment column number.
+when we have a color, print column number if != 0
+is it worth it ? because i'm colored yeah i think
+or maybe i should change color only of the 4 cells around me
+which will actually be even tricker
+we'll have an array of 'ray'
+
+
+ok it's super tricky
+
+
+i take the map
+
+
+remove solution, or write it as a text file maybe
+display hint
+check min width
+move view distance to some other place
+add dropping items in places to remember where u've been
+take parameters in cli for the size 
+size will be squared, so only a '-s' is enough
+automatic save and restore (which is the matrice itself actually, and x and y maybe)
+traps ? then u spawn at the beginning, and the user would put warning to remember ? it seems annoying though
