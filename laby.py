@@ -30,11 +30,13 @@ class Cell:
 
 class Laby:
 	def __init__(self):
-		self.height=50
+		self.height=150
 		self.width=150
+		self.max_light=11 #index in light_color
+		self.max_distance=5
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
-		self.light_color=[0,232,233,234,235,52,88,130,172,214,220,226] # 12
+		#self.light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
 
 	def possible_directions(self, x, y, digging):
 # return east, south, west, north 
@@ -78,45 +80,49 @@ class Laby:
 		return math.sqrt(abs(self.exit[0]-y)**2 + abs(self.exit[1]-x)**2)
 
 
-	def print_rendering(self, win, rendering, light_level):
-		#print("\033[1;1H")
-		win.clear()
-		for y in rendering:
+	def print_rendering(self, win, layout_light, layout_text, light_level):
+		win.clear() 
+		for y in range(0, len(layout_light)):
 			s=""
-			for x in y:
-				x=x-light_level
-				if x<0:
-					x=0
-				light=self.light_color[x]
-				#s+=win.addstr("\033[48;5;%dm  " % light) # doesn't work
-				win.addstr("  ", curses.color_pair(light))
+			for x in range(0, len(layout_light[0])):
+				light=layout_light[y][x]-light_level
+				if light<0:
+					light=0
+				text=layout_text[y][x]
+				if text!=None:
+					block=' %s' % text
+					light=min(self.max_light, light) 
+				else:
+					block="  "
+				#light_color=self.light_colors[light] 
+				win.addstr(block, curses.color_pair(light+1))
 			win.addstr("\n")
 
-	def render(self, x, y):
-	# i need two sources of light.. good luck with that
-# and i would like the second one to be blue gradiant, and not red gradiant
-# fuck you
-# if torch close enough
-# then we redo another loop
-# that will simluate
-# and taking account of the surface covered by the first matrice
-# i need actually one function, that uses a center, and a gradiant.
-# pb : render only output a light level
-# looks like the sum of render with a calque applied
+	def render_text(self, x, y):
+# i need light. if light < max_light/2, i don't display the number. i actually should pick foreground color here, and leave background as black, and fill with that big white block
+# actually, i'll just display the number, and bump up the light
+		text=[[None for j in range(0, self.max_distance*2+1)] for i in range(0, self.max_distance*2+1)]
+		for dy in range(0, self.max_distance*2+1):
+			for dx in range(0, self.max_distance*2+1):
+				px=x-self.max_distance+dx
+				py=y-self.max_distance+dy
+				if (px>=0) and (px<self.width) and (py>=0) and (py<self.height):
+					marker=self.map[py][px].marker
+					if marker!=None:
+						text[dy][dx]=marker 
+		return text
 
-	# will render an array of light intensity, from 20 to 0 maybe. array will have a size of 41x41
-		max_light=12
-		max_distance=5
-		light=[[0 for j in range(0, max_distance*2+1)] for i in range(0, max_distance*2+1)]
+	def render_light(self, x, y):
+		light=[[0 for j in range(0, self.max_distance*2+1)] for i in range(0, self.max_distance*2+1)]
 		angle=0
-		array_x=max_distance
-		array_y=max_distance
-		light[array_y][array_x]=max_light-1
+		array_x=self.max_distance
+		array_y=self.max_distance
+		light[array_y][array_x]=self.max_light-1
 		while angle < math.pi*2:
 # calculation
 			path=True
 			distance=1
-			while path and (distance <= max_distance): 
+			while path and (distance <= self.max_distance): 
 				dx=math.sin(angle)*distance
 				dy=math.cos(angle)*distance
 				px=round(x+dx) # position in absolute 
@@ -126,7 +132,7 @@ class Laby:
 				#print("%d %d / %d %d" % (px, py, rx, ry))
 				path=self.is_digged(px, py)
 				if path:
-					new_light=max_light-1-distance
+					new_light=self.max_light-1-distance
 					if light[ry][rx]<new_light:
 						light[ry][rx]=new_light
 				distance+=1
@@ -134,6 +140,11 @@ class Laby:
 		# then we change the array for a value from 0 to 1 in float
 		return light
 		
+	def place_object(self, obj, x, y):
+		self.map[y][x].marker=obj
+
+	def remove_object(self, x, y):
+		self.map[y][x].marker=None
 
 	def dig(self, x, y):
 		self.map[y][x].digged=True
@@ -142,9 +153,11 @@ class Laby:
 	# exit will be whatever wall to the east or south it reaches
 		x=0
 		y=0
-		while (x<self.width) and (y<self.height):
+		while (x<self.width-1) and (y<self.height-1):
 			self.map[y][x].digged=True
 			dir=random.choice(self.possible_directions(x, y, True))
+			old_x=x
+			old_y=y
 			if dir==north:
 				y=y-1
 			if dir==south:
@@ -153,8 +166,9 @@ class Laby:
 				x=x+1
 			if dir==west:
 				x=x-1
-		self.exit[0]=y
-		self.exit[1]=x
+		self.map[y][x].digged=True
+		self.exit[0]=old_y
+		self.exit[1]=old_x
 
 	def render_randomly(self): ## i need a thread here, sadly
 		print("\033[2J")
@@ -196,14 +210,25 @@ class Laby:
 def init_curses():
 	curses.start_color()
 	curses.use_default_colors()
-	for i in range(0, curses.COLORS):
-		curses.init_pair(i, -1, i); 
+
+	light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
+	for i in range(0, len(light_colors)):
+		curses.init_pair(i+1, 0, light_colors[i]); 
 
 def main(win):
 	init_curses()
 	win.nodelay(True)
 	key=""
+	win=curses.newwin(12, 28, 0, 0)
 	win.clear()
+	win2=curses.newwin(20, 30, 0, 30)
+	win2.addstr('wasd to move\n')
+	win2.addstr('1 to 9 to drop markers\n')
+	win2.addstr('0 to remove markers\n')
+	win2.addstr('q to quit\n')
+	win2.refresh()
+
+
 	laby=Laby()
 	laby.dig_v1()
 	laby.save_map('laby.map')
@@ -213,18 +238,25 @@ def main(win):
 	win.clear() 
 	cont=True
 	refresh=True
-	played_moved=True
+	player_moved=True
 	old_date=datetime.datetime.now()
 	i=0
+	new_object=False
 	while cont:		  
-		if played_moved:
+		if player_moved:
 			x=nx
 			y=ny
-			li=laby.render(x,y) 
+			li=laby.render_light(x,y) 
 			refresh=True 
-			played_moved=False
+		if new_object or player_moved:
+			te=laby.render_text(x,y) 
+			new_object=False
+		if player_moved:
+			player_moved=False
+
+
 		new_date=datetime.datetime.now()
-		if (new_date-old_date).total_seconds()>1:
+		if (new_date-old_date).total_seconds()>0.5:
 			old_date=new_date
 			old_light_level=light_level
 			light_level+=(random.randrange(0,2)*2-1)
@@ -237,7 +269,7 @@ def main(win):
 		time.sleep(0.01) # actually, i should change the light_level if some time passed
 # and have another time for the global loop
 		if refresh:
-			laby.print_rendering(win, li, light_level)
+			laby.print_rendering(win, li, te, light_level)
 			win.addstr("Distance to exit: %0.2f" % (laby.get_distance_exist(x, y)))
 			refresh=False
 			i+=1
@@ -248,6 +280,12 @@ def main(win):
 			pass
 		if key=='q':
 			cont=False
+		if key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
+			laby.place_object(key, x, y)
+			new_object=True
+		if key=='0':
+			laby.remove_object(x, y)
+			new_object=True
 		if key in ['a', 's', 'd', 'w']:
 			dirs=laby.possible_directions(x, y, False)
 			if (key=='a') and (west in dirs):
@@ -259,16 +297,16 @@ def main(win):
 			if (key=='s') and (south in dirs):
 				ny=y+1
 			if (ny!=y) or (nx!=x):
-				played_moved=True
+				player_moved=True
 		if (ny==laby.height-1) or (nx==laby.width-1):
 			cont=False
 
 #		except Exception as e:
 #			pass		 
-	win.nodelay(False)
-	win.clear()
-	win.addstr("you win")
-	win.getkey()
+	#win.nodelay(False)
+	#win.clear()
+	#win.addstr("you win")
+	#win.getkey()
 
 
 
