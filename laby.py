@@ -257,7 +257,7 @@ def main(win):
 			new_object=False 
 
 		new_date=datetime.datetime.now()
-		if (new_date-old_date).total_seconds()>1: 
+		if (new_date-old_date).total_seconds()>0.3: 
 			old_date=new_date
 			old_light_level=light_level
 			light_level+=(random.randrange(0,2)*2-1)
