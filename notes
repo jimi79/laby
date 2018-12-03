@@ -25,3 +25,6 @@ take parameters in cli for the size
 size will be squared, so only a '-s' is enough
 automatic save and restore (which is the matrice itself actually, and x and y maybe)
 traps ? then u spawn at the beginning, and the user would put warning to remember ? it seems annoying though
+
+blinking cursor
+no more light flickering

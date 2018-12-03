@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 #                north                 ^
 #             [                        |  
@@ -217,7 +217,6 @@ def init_curses():
 
 def main(win):
 	init_curses()
-	win.nodelay(True)
 	key=""
 	win=curses.newwin(12, 28, 0, 0)
 	win.clear()
@@ -228,6 +227,7 @@ def main(win):
 	win2.addstr('q to quit\n')
 	win2.refresh()
 
+	win.nodelay(True)
 
 	laby=Laby()
 	laby.dig_v1()
@@ -243,20 +243,20 @@ def main(win):
 	i=0
 	new_object=False
 	while cont:		  
+		time.sleep(0.01) # cpu usage
 		if player_moved:
 			x=nx
 			y=ny
-			li=laby.render_light(x,y) 
-			refresh=True 
-		if new_object or player_moved:
 			te=laby.render_text(x,y) 
-			new_object=False
-		if player_moved:
+			refresh=True 
 			player_moved=False
-
+		if new_object:
+			te=laby.render_text(x,y) 
+			refresh=True 
+			new_object=False 
 
 		new_date=datetime.datetime.now()
-		if (new_date-old_date).total_seconds()>0.5:
+		if (new_date-old_date).total_seconds()>1: 
 			old_date=new_date
 			old_light_level=light_level
 			light_level+=(random.randrange(0,2)*2-1)
@@ -266,11 +266,12 @@ def main(win):
 				light_level=3
 			if (light_level!=old_light_level):
 				refresh=True 
-		time.sleep(0.01) # actually, i should change the light_level if some time passed
-# and have another time for the global loop
+
 		if refresh:
+			li=laby.render_light(x,y) 
 			laby.print_rendering(win, li, te, light_level)
 			win.addstr("Distance to exit: %0.2f" % (laby.get_distance_exist(x, y)))
+			win.refresh()
 			refresh=False
 			i+=1
 		key=""
