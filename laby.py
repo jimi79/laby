@@ -228,6 +228,7 @@ def main(win):
 	win2.refresh()
 
 	win.nodelay(True)
+	curses.curs_set(False)
 
 	laby=Laby()
 	laby.dig_v1()
