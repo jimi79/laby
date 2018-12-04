@@ -156,9 +156,23 @@ class Laby:
 	# exit will be whatever wall to the east or south it reaches
 		x=0
 		y=0
+		last_dir=None
 		while (x<self.width-1) and (y<self.height-1):
 			self.map[y][x].digged=True
-			dir=random.choice(self.possible_directions(x, y, True))
+
+			
+
+
+			if last_dir==None or (random.randrange(1,2)==1):
+				dir=random.choice(self.possible_directions(x, y, True))
+			else:
+				dir=last_dir
+				if not(dir in self.possible_directions(x, y, True)):
+					dir=random.choice(self.possible_directions(x, y, True))
+
+			last_dir=dir
+
+
 			old_x=x
 			old_y=y
 			if dir==north:
@@ -245,7 +259,7 @@ def check_key(key):
 				item_left=""
 			else:
 				item_left=key
-		continuous=key.lower()==key
+		continuous=key.upper()==key
 	return direction, continuous, item_left
 
 def write_log(s):
@@ -266,8 +280,8 @@ def main(win):
 	win=curses.newwin(12, 28, 0, 0)
 	win.clear()
 	win2=curses.newwin(20, 60, 0, 30)
-	win2.addstr('wasd to move (press once and the guy keeps moving)\n')
-	win2.addstr('WASD to move once\n')
+	win2.addstr('wasd to move once\n')
+	win2.addstr('WASD to move and keep moving\n')
 	win2.addstr('1 to 9 to drop markers\n')
 	win2.addstr('0 to remove markers\n')
 	win2.addstr('q to quit\n')
@@ -301,7 +315,7 @@ def main(win):
 # is the player running
 		if player_running_direction!=None:
 			new_running_last_step=datetime.datetime.now()
-			if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.3): 
+			if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.2): 
 				old_running_last_step=new_running_last_step
 				player_direction=player_running_direction
 				first_run=False
