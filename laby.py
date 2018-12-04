@@ -30,8 +30,8 @@ class Cell:
 
 class Laby:
 	def __init__(self):
-		self.height=30
-		self.width=30
+		self.height=150
+		self.width=150
 		self.max_light=11 #index in light_color
 		self.max_distance=5
 		self.exit=[-1,-1]
