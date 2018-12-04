@@ -30,8 +30,8 @@ class Cell:
 
 class Laby:
 	def __init__(self):
-		self.height=150
-		self.width=150
+		self.height=30
+		self.width=30
 		self.max_light=11 #index in light_color
 		self.max_distance=5
 		self.exit=[-1,-1]
@@ -90,7 +90,10 @@ class Laby:
 					light=0
 				text=layout_text[y][x]
 				if text!=None:
-					block=' %s' % text
+					if len(text)==1:
+						block=' %s' % text
+					else:
+						block=text
 					light=min(self.max_light, light) 
 				else:
 					block="  "
@@ -167,8 +170,9 @@ class Laby:
 			if dir==west:
 				x=x-1
 		self.map[y][x].digged=True
-		self.exit[0]=old_y
-		self.exit[1]=old_x
+		self.exit[0]=y
+		self.exit[1]=x
+		self.map[y][x].marker='[]'
 
 	def render_randomly(self): ## i need a thread here, sadly
 		print("\033[2J")
