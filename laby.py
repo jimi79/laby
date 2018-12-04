@@ -32,7 +32,7 @@ class Laby:
 	def __init__(self):
 		self.height=300
 		self.width=300
-		self.max_light=11 #index in light_color
+		self.max_light=13 #index in light_color
 		self.max_distance=5
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
@@ -81,7 +81,8 @@ class Laby:
 
 
 	def print_rendering(self, win, layout_light, layout_text, light_level):
-		win.clear() 
+		#win.clear() 
+		win.move(1,1)
 		for y in range(0, len(layout_light)):
 			s=""
 			for x in range(0, len(layout_light[0])):
@@ -94,7 +95,7 @@ class Laby:
 						block=' %s' % text
 					else:
 						block=text
-					light=min(self.max_light, light) 
+					light=min(self.max_light-1, light) 
 				else:
 					block="  "
 				#light_color=self.light_colors[light] 
@@ -135,12 +136,20 @@ class Laby:
 				#print("%d %d / %d %d" % (px, py, rx, ry))
 				path=self.is_digged(px, py)
 				if path:
-					new_light=self.max_light-1-distance
-					if light[ry][rx]<new_light:
-						light[ry][rx]=new_light
+					light[ry][rx]=self.max_light-1-distance
+# things i've tried here and didn't work
+# add light each time the ray come across the cell:
+# light+=max_light/100
+# so the further away i am, the less ray will go on the cell
+# -> didn't look good
+#
+# add light if no path (meaning light bumps on the wall) -> display less readable 
 				distance+=1
 			angle+=math.pi/50
 		# then we change the array for a value from 0 to 1 in float
+
+		light=[[min(round(i), self.max_light-1) for i in x] for x in light]
+
 		return light
 		
 	def place_object(self, obj, x, y):
@@ -158,21 +167,14 @@ class Laby:
 		y=0
 		last_dir=None
 		while (x<self.width-1) and (y<self.height-1):
-			self.map[y][x].digged=True
-
-			
-
-
+			self.map[y][x].digged=True 
 			if last_dir==None or (random.randrange(1,2)==1):
 				dir=random.choice(self.possible_directions(x, y, True))
 			else:
 				dir=last_dir
 				if not(dir in self.possible_directions(x, y, True)):
-					dir=random.choice(self.possible_directions(x, y, True))
-
-			last_dir=dir
-
-
+					dir=random.choice(self.possible_directions(x, y, True)) 
+			last_dir=dir 
 			old_x=x
 			old_y=y
 			if dir==north:
@@ -270,16 +272,16 @@ def init_curses():
 	curses.start_color()
 	curses.use_default_colors()
 
-	light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
+	light_colors=[0,232,233,234,235,52,88,130,172,214,220,226,15] # 13
 	for i in range(0, len(light_colors)):
 		curses.init_pair(i+1, 0, light_colors[i]); 
 
 def main(win):
 	init_curses()
 	key=""
-	win=curses.newwin(12, 28, 0, 0)
+	win=curses.newwin(30, 40, 0, 0)
 	win.clear()
-	win2=curses.newwin(20, 60, 0, 30)
+	win2=curses.newwin(20, 40, 0, 41)
 	win2.addstr('wasd to move once\n')
 	win2.addstr('WASD to move and keep moving\n')
 	win2.addstr('1 to 9 to drop markers\n')
@@ -359,11 +361,12 @@ def main(win):
 		if refresh:
 			li=laby.render_light(x,y) 
 			laby.print_rendering(win, li, te, light_level)
-			win.addstr("Distance to exit: %0.2f" % (laby.get_distance_exist(x, y)))
+			win.addstr("Distance to exit: %0.2f   " % (laby.get_distance_exist(x, y)))
 			win.refresh()
 			refresh=False
 		key=""
 		try:				 
+#			pass
 			key = win.getkey()		 
 		except:
 			pass
@@ -394,6 +397,13 @@ def debug():
 	l=Laby()
 	#l.dig_v1()
 	print(l.possible_directions(10,10, False))
+
+def main2(win):
+	win.clear()
+	for i in range(0,15):
+		win.addstr("%d\n" % i, curses.color_pair(i))
+	win.getkey()
+
 
 curses.wrapper(main)
 #debug()
