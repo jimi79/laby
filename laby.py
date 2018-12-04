@@ -30,8 +30,8 @@ class Cell:
 
 class Laby:
 	def __init__(self):
-		self.height=150
-		self.width=150
+		self.height=300
+		self.width=300
 		self.max_light=11 #index in light_color
 		self.max_distance=5
 		self.exit=[-1,-1]
@@ -211,6 +211,47 @@ class Laby:
 				print("x=%d y=%d" % (x, y))
 				self.dig(x, y)
 
+	def can_go(self, x, y, direction): 
+		dirs=self.possible_directions(x, y, False)
+		if direction in dirs:
+			if direction==north:
+				y-=1
+			if direction==south:
+				y+=1
+			if direction==east:
+				x+=1
+			if direction==west:
+				x-=1
+			return True, x, y
+		else:
+			return False, x, y
+
+
+def check_key(key):
+	direction=None
+	continuous=None
+	item_left=None
+	if key!='':
+		if key.lower()=='w':
+			direction=north
+		if key.lower()=='s':
+			direction=south
+		if key.lower()=='a':
+			direction=west
+		if key.lower()=='d':
+			direction=east
+		if key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+			if key=='0':
+				item_left=""
+			else:
+				item_left=key
+		continuous=key.lower()==key
+	return direction, continuous, item_left
+
+def write_log(s):
+	with open("log.log", "a") as f:
+		f.write("%s\n" % s)
+
 def init_curses():
 	curses.start_color()
 	curses.use_default_colors()
@@ -224,8 +265,9 @@ def main(win):
 	key=""
 	win=curses.newwin(12, 28, 0, 0)
 	win.clear()
-	win2=curses.newwin(20, 30, 0, 30)
-	win2.addstr('wasd to move\n')
+	win2=curses.newwin(20, 60, 0, 30)
+	win2.addstr('wasd to move (press once and the guy keeps moving)\n')
+	win2.addstr('WASD to move once\n')
 	win2.addstr('1 to 9 to drop markers\n')
 	win2.addstr('0 to remove markers\n')
 	win2.addstr('q to quit\n')
@@ -237,29 +279,56 @@ def main(win):
 	laby=Laby()
 	laby.dig_v1()
 	laby.save_map('laby.map')
-	nx=0
-	ny=0
+	x=0
+	y=0
 	light_level=0
 	win.clear() 
-	cont=True
-	refresh=True
-	player_moved=True
-	old_date=datetime.datetime.now()
-	i=0
-	new_object=False
+	cont=True # global loop
+	old_date=datetime.datetime.now() # last time the torch's light changed
+	new_object=False # a new object was placed or an object was removed, refresh the display
+	refresh=True # refresh the display
+	player_direction=None # player move (north, east, etc). may be impossible
+	player_running_direction=None # not stopping after doing one step
+	te=laby.render_text(x,y) # first time, we do it manually
+	old_running_last_step=datetime.datetime.now()
+	first_run=False
 	while cont:		  
 		time.sleep(0.01) # cpu usage
-		if player_moved:
-			x=nx
-			y=ny
+
+		if (x==laby.exit[1]) and (y==laby.exit[0]):
+			cont=False # he wins 
+
+# is the player running
+		if player_running_direction!=None:
+			new_running_last_step=datetime.datetime.now()
+			if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.3): 
+				old_running_last_step=new_running_last_step
+				player_direction=player_running_direction
+				first_run=False
+			else:
+				player_direction=None 
+
+# does the player want to move
+		if player_direction!=None:
+			can_go, x, y=laby.can_go(x, y, player_direction)
+			if can_go:
+				refresh=True
+			else:
+				player_running_direction=None
+			if player_running_direction==None:
+				player_direction=None # if not running, stopping after one step
+			
 			te=laby.render_text(x,y) 
 			refresh=True 
 			player_moved=False
+
+# did the player put an object on the map
 		if new_object:
 			te=laby.render_text(x,y) 
 			refresh=True 
 			new_object=False 
 
+# does the torch want to change its luminescence
 		new_date=datetime.datetime.now()
 		if (new_date-old_date).total_seconds()>0.3: 
 			old_date=new_date
@@ -272,48 +341,39 @@ def main(win):
 			if (light_level!=old_light_level):
 				refresh=True 
 
+# after all these events, is there one that requires us to redo the display
 		if refresh:
 			li=laby.render_light(x,y) 
 			laby.print_rendering(win, li, te, light_level)
 			win.addstr("Distance to exit: %0.2f" % (laby.get_distance_exist(x, y)))
 			win.refresh()
 			refresh=False
-			i+=1
 		key=""
 		try:				 
 			key = win.getkey()		 
 		except:
 			pass
-		if key=='q':
-			cont=False
-		if key in ['1', '2', '3', '4', '5', '6', '7', '8', '9']:
-			laby.place_object(key, x, y)
-			new_object=True
-		if key=='0':
-			laby.remove_object(x, y)
-			new_object=True
-		if key in ['a', 's', 'd', 'w']:
-			dirs=laby.possible_directions(x, y, False)
-			if (key=='a') and (west in dirs):
-				nx=x-1
-			if (key=='d') and (east in dirs):
-				nx=x+1
-			if (key=='w') and (north in dirs):
-				ny=y-1
-			if (key=='s') and (south in dirs):
-				ny=y+1
-			if (ny!=y) or (nx!=x):
-				player_moved=True
-		if (ny==laby.height-1) or (nx==laby.width-1):
-			cont=False
 
-#		except Exception as e:
-#			pass		 
-	#win.nodelay(False)
-	#win.clear()
-	#win.addstr("you win")
-	#win.getkey()
+		# key presseed
+		if key != '':
+			if key=='q':
+				cont=False # exit, would requires some sort of confirmation though
+			direction, is_player_running, item_left=check_key(key)
+			if direction!=None:
+				if is_player_running:
+					player_running_direction=direction
+					player_direction=None
+					old_running_last_step=datetime.datetime.now() # last time the player stepped while running, we initialse at now to match the before-while initialisation. Anyway first_run is at true
+					first_run=True # first run, because first time we don't wait the time delta
+				else:
+					player_direction=direction
+					player_running_direction=None
+			if item_left!=None:
+				laby.map[y][x].marker=item_left
+				new_object=True
 
+# check reach exit		if (ny==laby.height-1) or (nx==laby.width-1):
+#			cont=False
 
 
 def debug():

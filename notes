@@ -28,3 +28,6 @@ traps ? then u spawn at the beginning, and the user would put warning to remembe
 
 blinking cursor
 no more light flickering
+
+
+automatic save when quitting, r to reset map, save and load at quitting and reloading
