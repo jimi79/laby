@@ -21,3 +21,5 @@ When the exit is reached, the program exits. You can also quit with letter q.
 When you restart, a new map is generated.
 
 A file, laby.map, is generated once you start the game with the map of the cave.
+
+You can also change settings, check with -h options
