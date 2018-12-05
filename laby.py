@@ -407,6 +407,7 @@ class BinaryGame:
 	def __init__(self):
 		self.array_dir_to_bin={4:1, 1:2, 2:4, 3:8}
 		self.array_bin_to_dir={1:4, 2:1, 4:2, 8:3}
+		self.size=10
 
 	def dir_to_bin(self, dirs):
 		a=0
@@ -415,8 +416,10 @@ class BinaryGame:
 		return a
 
 	def play(self):
-		laby=Laby(10)
+		laby=Laby(self.size)
+		print("please wait, building the map...")
 		laby.dig_v1()
+		print("done")
 		laby.save_map('laby.map')
 		x=0
 		y=0
@@ -449,16 +452,23 @@ class BinaryGame:
 							x+=1
 						if idir==west:
 							x-=1
-		print("you reach the exit")
+		if cont:
+			print("you reach the exit")
+		else:
+			print("you quit")
 
 
-parser=argparse.ArugmentParser(description="Labyrinth")
-parser.add_arugment('--binary', action='store_cosnt', const=binary, help='play in binary')
-if binary:
+parser=argparse.ArgumentParser(description="Labyrinth")
+parser.add_argument('--binary', action='store_const', dest='binary', help='play in binary', const=True)
+parser.add_argument('--size', help='size of the laby (default 150)', type=int, default=150)
+args=parser.parse_args()
+if args.binary:
 	a=BinaryGame()
+	a.size=args.size
 	a.play()
 else:
 	a=CursesGame()
+	a.size=args.size
 	curses.wrapper(a.main)
 #debug()
 
