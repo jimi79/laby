@@ -18,7 +18,7 @@ import curses
 import time
 import datetime
 import argparse
-
+import numpy
 
 east=1
 south=2
@@ -82,13 +82,12 @@ class Laby:
 		return math.sqrt(abs(self.exit[0]-y)**2 + abs(self.exit[1]-x)**2)
 
 
-	def print_rendering(self, win, layout_light, layout_text, light_level):
-		#win.clear() 
-		win.move(1,1)
-		for y in range(0, len(layout_light)):
+	def print_rendering(self, win, layout_light, layout_text):
+		win.clear()
+		for y in range(0, layout_light.shape[0]):
 			s=""
-			for x in range(0, len(layout_light[0])):
-				light=layout_light[y][x]-light_level
+			for x in range(0, layout_light.shape[1]):
+				light=layout_light[y, x]
 				if light<0:
 					light=0
 				text=layout_text[y][x]
@@ -101,7 +100,7 @@ class Laby:
 				else:
 					block="  "
 				#light_color=self.light_colors[light] 
-				win.addstr(block, curses.color_pair(light+1))
+				win.addstr(block, curses.color_pair(light+1)) 
 			win.addstr("\n")
 
 	def render_text(self, x, y):
@@ -118,15 +117,16 @@ class Laby:
 						text[dy][dx]=marker 
 		return text
 
-	def render_light(self, povx, povy, lx, ly):
+	def render_light(self, povx, povy, lx, ly, ignore_wall_length=0):
 # render the light for one light source
 # povx povy: point of view
-# lx ly: light source
-
+# lx ly: light source 
+# ignore_wall_length: light pass through walls for that distance, 0=no
 
 		array_size=self.max_distance*2+1
-		light=[[0 for j in range(0, array_size)] for i in range(0, array_size)] 
+		light=numpy.zeros((array_size, array_size)).astype(int)
 
+# TODO
 # first : distance between light and center. if too big, then no point of doing anythg
 
 		angle=0
@@ -135,26 +135,22 @@ class Laby:
 		array_abs_top=povx-self.max_distance # coordinate of the top left of the array, in absolute
 		array_abs_left=povy-self.max_distance # coordinate of the top left of the array, in absolute
 
-		#light[self.max_distance][self.max_distance]=self.max_light-1 # center of the array
-		while angle < math.pi*2:
-# calculation
-			path=True
-			distance=0
-			while path and (distance <= self.max_distance): 
-				dx=math.sin(angle)*distance
-				dy=math.cos(angle)*distance
-				abs_x=round(lx+dx) # position in absolute 
-				abs_y=round(ly+dy) 
-
-				# i have to find out 
-				array_x=abs_x-array_abs_top
-				array_y=abs_y-array_abs_left 
-
-				#print("%d %d / %d %d" % (px, py, rx, ry))
-				path=self.is_digged(abs_x, abs_y)
-				if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
-					if path:
-						light[array_y][array_x]=self.max_light-1-distance
+		distance=math.sqrt((povx-lx)**2+(povy-ly)**2)
+		if distance < (self.max_distance*2): 
+			while angle < math.pi*2:
+				path=True
+				distance=0
+				while path and (distance <= self.max_distance): 
+					dx=math.sin(angle)*distance
+					dy=math.cos(angle)*distance
+					abs_x=round(lx+dx) # position in absolute 
+					abs_y=round(ly+dy) 
+					array_x=abs_x-array_abs_top
+					array_y=abs_y-array_abs_left 
+					path=self.is_digged(abs_x, abs_y) or distance<ignore_wall_length
+					if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
+						if path:
+							light[array_y, array_x]=self.max_light-1-distance
 # things i've tried here and didn't work
 # add light each time the ray come across the cell:
 # light+=max_light/100
@@ -162,12 +158,17 @@ class Laby:
 # -> didn't look good
 #
 # add light if no path (meaning light bumps on the wall) -> display less readable 
-				distance+=1
-			angle+=math.pi/50
-		# then we change the array for a value from 0 to 1 in float
+					distance+=1
+				angle+=math.pi/50
+			light=light.round().astype(int)
+		return light
 
-		light=[[min(round(i), self.max_light-1) for i in x] for x in light]
-
+	def render_lights(self, povx, povy, lx, ly, light_level=0):
+		light=self.render_light(povx, povy, lx, ly)
+		light=light-light_level # torch flicker
+		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
+		# no torch flicker for the exit
+		light=numpy.maximum(light, light_exit)
 		return light
 		
 	def place_object(self, obj, x, y):
@@ -178,6 +179,14 @@ class Laby:
 
 	def dig(self, x, y):
 		self.map[y][x].digged=True
+
+	def dig_clear(self):
+		for i in range(0, len(self.map)-1):
+			for j in range(0, len(self.map)-1):
+				self.map[i][j].digged=True
+		self.exit[0]=self.height-1
+		self.exit[1]=self.width-2
+		self.map[self.exit[0]][self.exit[1]].digged=True
 
 	def dig_v1(self):
 	# exit will be whatever wall to the east or south it reaches
@@ -206,22 +215,8 @@ class Laby:
 		self.map[y][x].digged=True
 		self.exit[0]=y
 		self.exit[1]=x
-		self.map[y][x].marker='[]'
+		#self.map[y][x].marker='[]'
 
-	def render_randomly(self): ## i need a thread here, sadly
-		print("\033[2J")
-		self.dig_v1()
-		light_level=0
-		li=self.render(5, 5)
-		for i in range(0,50):
-			light_level+=(random.randrange(0,2)*2-1)
-			if light_level<0:
-				light_level=0
-			if light_level>3:
-				light_level=3
-			self.print_rendering(li, light_level)
-			time.sleep(0.1)
-	
 	def dig_v2(self):
 		# we create n paths, but one will lead to the exit
 		paths=[]
@@ -315,9 +310,9 @@ class CursesGame():
 		win.refresh()
 		self.laby=Laby(self.size)
 		self.laby.dig_v1()
+		#self.laby.dig_clear()
 		self.laby.save_map('laby.map')
-		win.clear()
-
+		win.clear() 
 	
 	def main(self, win):
 		self.init_colors()
@@ -388,8 +383,9 @@ class CursesGame():
 
 # after all these events, is there one that requires us to redo the display
 			if refresh:
-				li=self.laby.render_light(x, y, x, y) 
-				self.laby.print_rendering(win, li, te, light_level)
+				win.clear()
+				li=self.laby.render_lights(x, y, x, y, light_level=light_level) 
+				self.laby.print_rendering(win, li, te)
 				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
 				win.refresh()
 				refresh=False

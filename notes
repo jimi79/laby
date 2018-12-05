@@ -1,6 +1,7 @@
 roadmap
 
 / switch to numpy
+/ move light_level to the rendering thing, or apart. not in the print part, so i can play with light_level afterward
 / render light even if outside -> don't assume light is at the center of the matrice. still take account of walls. update light only if relevant. to test, render assuming player is always in 5/5. moving should change the point of view (won't be easy to move)
 / try with fixed source light in 5,5
 / try using RGB instead of fixed thing. work with that level thing
