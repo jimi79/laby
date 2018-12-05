@@ -34,8 +34,9 @@ class Laby:
 	def __init__(self, size=150):
 		self.height=size
 		self.width=size
-		self.max_light=13 #index in light_color
-		self.max_distance=5
+		self.max_light_level=13 #index in light_color
+		self.max_light_distance=5
+		self.max_view_distance=5
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
 		#self.light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
@@ -96,7 +97,7 @@ class Laby:
 						block=' %s' % text
 					else:
 						block=text
-					light=min(self.max_light-1, light) 
+					light=min(self.max_light_level-1, light) 
 				else:
 					block="  "
 				#light_color=self.light_colors[light] 
@@ -106,41 +107,69 @@ class Laby:
 	def render_text(self, x, y):
 # i need light. if light < max_light/2, i don't display the number. i actually should pick foreground color here, and leave background as black, and fill with that big white block
 # actually, i'll just display the number, and bump up the light
-		text=[[None for j in range(0, self.max_distance*2+1)] for i in range(0, self.max_distance*2+1)]
-		for dy in range(0, self.max_distance*2+1):
-			for dx in range(0, self.max_distance*2+1):
-				px=x-self.max_distance+dx
-				py=y-self.max_distance+dy
+		text=[[None for j in range(0, self.max_view_distance*2+1)] for i in range(0, self.max_view_distance*2+1)]
+		for dy in range(0, self.max_view_distance*2+1):
+			for dx in range(0, self.max_view_distance*2+1):
+				px=x-self.max_view_distance+dx
+				py=y-self.max_view_distance+dy
 				if (px>=0) and (px<self.width) and (py>=0) and (py<self.height):
 					marker=self.map[py][px].marker
 					if marker!=None:
 						text[dy][dx]=marker 
 		return text
 
-	def render_light(self, povx, povy, lx, ly, ignore_wall_length=0):
+	def render_view(self, povx, povy):
+		array_size=self.max_view_distance*2+1
+		view=numpy.zeros((array_size, array_size)).astype(int)
+		angle=0
+		array_center_x=self.max_view_distance # relative center of the view
+		array_center_y=self.max_view_distance
+		array_abs_top=povx-self.max_view_distance # coordinate of the top left of the array, in absolute
+		array_abs_left=povy-self.max_view_distance # coordinate of the top left of the array, in absolute 
+		while angle < math.pi*2:
+			path=True
+			distance=0
+			while path and (distance <= self.max_view_distance): 
+				dx=math.sin(angle)*distance
+				dy=math.cos(angle)*distance
+				abs_x=round(povx+dx) # position in absolute 
+				abs_y=round(povy+dy) 
+				array_x=abs_x-array_abs_top
+				array_y=abs_y-array_abs_left 
+				path=self.is_digged(abs_x, abs_y)
+				if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
+					if path:
+						view[array_y, array_x]=1
+# things i've tried here and didn't work
+# add light each time the ray come across the cell:
+# light+=max_light/100
+# so the further away i am, the less ray will go on the cell
+# -> didn't look good
+#
+# add light if no path (meaning light bumps on the wall) -> display less readable 
+				distance+=1
+			angle+=math.pi/50
+		return view 
+
+	def render_light(self, povx, povy, lx, ly, ignore_wall_length=0, view=None):
 # render the light for one light source
 # povx povy: point of view
 # lx ly: light source 
-# ignore_wall_length: light pass through walls for that distance, 0=no
-
-		array_size=self.max_distance*2+1
+# ignore_wall_length: light pass through walls for that distance, 0=no 
+		array_size=self.max_view_distance*2+1
 		light=numpy.zeros((array_size, array_size)).astype(int)
-
-# TODO
-# first : distance between light and center. if too big, then no point of doing anythg
-
 		angle=0
-		array_center_x=self.max_distance # relative center of the view
-		array_center_y=self.max_distance
-		array_abs_top=povx-self.max_distance # coordinate of the top left of the array, in absolute
-		array_abs_left=povy-self.max_distance # coordinate of the top left of the array, in absolute
+		array_center_x=self.max_view_distance # relative center of the view
+		array_center_y=self.max_view_distance
+		array_abs_top=povx-self.max_view_distance # coordinate of the top left of the array, in absolute
+		array_abs_left=povy-self.max_view_distance # coordinate of the top left of the array, in absolute
 
 		distance=math.sqrt((povx-lx)**2+(povy-ly)**2)
-		if distance < (self.max_distance*2): 
+		if distance < (self.max_view_distance+self.max_light_distance): 
 			while angle < math.pi*2:
 				path=True
 				distance=0
-				while path and (distance <= self.max_distance): 
+				while path and (distance <= self.max_light_distance): 
 					dx=math.sin(angle)*distance
 					dy=math.cos(angle)*distance
 					abs_x=round(lx+dx) # position in absolute 
@@ -150,7 +179,7 @@ class Laby:
 					path=self.is_digged(abs_x, abs_y) or distance<ignore_wall_length
 					if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
 						if path:
-							light[array_y, array_x]=self.max_light-1-distance
+							light[array_y, array_x]=self.max_light_level-1-distance
 # things i've tried here and didn't work
 # add light each time the ray come across the cell:
 # light+=max_light/100
@@ -167,6 +196,8 @@ class Laby:
 		light=self.render_light(povx, povy, lx, ly)
 		light=light-light_level # torch flicker
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
+		view=self.render_view(povx, povy)
+		light_exit=light_exit*view
 		# no torch flicker for the exit
 		light=numpy.maximum(light, light_exit)
 		return light
