@@ -5,6 +5,8 @@ roadmap
 / render light even if outside -> don't assume light is at the center of the matrice. still take account of walls. update light only if relevant. to test, render assuming player is always in 5/5. moving should change the point of view (won't be easy to move)
 / try with fixed source light in 5,5
 / try using RGB instead of fixed thing. work with that level thing
+that is useful to be able to mix the blue outside light with the red torch light.
+means the light layer is now colored, and the mix can't be max. actually, a layer now is a set of rgb for each cell. and two layer added is the max for each channel.
 / try summing RGB...
 meaning working with layer of light, for which then we add a color. like level is from 1 to 6 (we lose a lot of values here). maybe we can use gray nuance from 1 to 6, then if >7, we apply rgb
 if red:it's 5*6^2 for level 5

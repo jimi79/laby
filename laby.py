@@ -36,7 +36,7 @@ class Laby:
 		self.width=size
 		self.max_light_level=13 #index in light_color
 		self.max_light_distance=5
-		self.max_view_distance=5
+		self.max_view_distance=10
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
 		#self.light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
@@ -324,7 +324,7 @@ class CursesGame():
 			curses.init_pair(i+1, 0, light_colors[i]); 
 
 	def add_help_window(self):
-		win2=curses.newwin(20, 40, 0, 41)
+		win2=curses.newwin(20, 40, 0, 55)
 		win2.addstr('wasd to move once\n')
 		win2.addstr('WASD to move and keep moving\n')
 		win2.addstr('1 to 9 to drop marker\n')
@@ -348,7 +348,7 @@ class CursesGame():
 		self.init_colors()
 		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
 		key=""
-		win=curses.newwin(30, 40, 0, 0)
+		win=curses.newwin(50, 50, 0, 0)
 		self.add_help_window() 
 		win.nodelay(True)
 		curses.curs_set(False) 
