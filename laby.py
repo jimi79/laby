@@ -194,12 +194,11 @@ class Laby:
 
 	def render_lights(self, povx, povy, lx, ly, light_level=0):
 		light=self.render_light(povx, povy, lx, ly)
-		light=light-light_level # torch flicker
+		light=light-light_level # torch flicker 
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
 		view=self.render_view(povx, povy)
 		light_exit=light_exit*view
-		# no torch flicker for the exit
-		light=numpy.maximum(light, light_exit)
+		light=numpy.maximum(light, light_exit) 
 		return light
 		
 	def place_object(self, obj, x, y):
