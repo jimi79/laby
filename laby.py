@@ -20,10 +20,17 @@ import datetime
 import argparse
 import numpy
 
+debug=False
+
 east=1
 south=2
 west=3
 north=4
+
+
+def write_log(s):
+	with open("log.log", "a") as f:
+		f.write("%s\n" % s)
 
 class Cell:
 	def __init__(self):
@@ -35,8 +42,9 @@ class Laby:
 		self.height=size
 		self.width=size
 		self.max_light_level=13 #index in light_color
-		self.max_light_distance=5
-		self.max_view_distance=10
+		self.max_light_distance=5 # if you increment that, you got to increment the step for each ray 
+		self.max_view_distance=7 # if you increment that, you got to increment the step for each ray 
+		self.ray_step=30
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
 		#self.light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
@@ -126,6 +134,7 @@ class Laby:
 		array_center_y=self.max_view_distance
 		array_abs_top=povx-self.max_view_distance # coordinate of the top left of the array, in absolute
 		array_abs_left=povy-self.max_view_distance # coordinate of the top left of the array, in absolute 
+		s=""
 		while angle < math.pi*2:
 			path=True
 			distance=0
@@ -137,6 +146,8 @@ class Laby:
 				array_x=abs_x-array_abs_top
 				array_y=abs_y-array_abs_left 
 				path=self.is_digged(abs_x, abs_y)
+				if debug:
+					s+='%d %d ' % (abs_x, abs_y)
 				if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
 					if path:
 						view[array_y, array_x]=1
@@ -148,7 +159,7 @@ class Laby:
 #
 # add light if no path (meaning light bumps on the wall) -> display less readable 
 				distance+=1
-			angle+=math.pi/50
+			angle+=math.pi/self.ray_step
 		return view 
 
 	def render_light(self, povx, povy, lx, ly, ignore_wall_length=0, view=None):
@@ -192,13 +203,28 @@ class Laby:
 			light=light.round().astype(int)
 		return light
 
-	def render_lights(self, povx, povy, lx, ly, light_level=0):
-		light=self.render_light(povx, povy, lx, ly)
-		light=light-light_level # torch flicker 
+	def write_matrice_debug_file(self, mat):
+		numpy.savetxt("debug.csv", mat, fmt="%3d")
+
+
+	def render_lights(self, povx, povy, lx, ly, light_level=0, light_on=True):
+		if light_on:
+			light=self.render_light(povx, povy, lx, ly)
+			light=light-light_level # torch flicker 
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
 		view=self.render_view(povx, povy)
 		light_exit=light_exit*view
-		light=numpy.maximum(light, light_exit) 
+
+		if light_on:
+			light=numpy.maximum(light, light_exit) 
+		else:
+			light=light_exit
+
+		if debug:
+			light_debug=self.render_light(povx, povy, 10, 10)
+			light=numpy.maximum(light, light_debug) 
+
+
 		return light
 		
 	def place_object(self, obj, x, y):
@@ -219,6 +245,9 @@ class Laby:
 		self.map[self.exit[0]][self.exit[1]].digged=True
 
 	def dig_v1(self):
+		if debug:
+			self.dig_clear() #debug
+			pass
 	# exit will be whatever wall to the east or south it reaches
 		x=0
 		y=0
@@ -311,10 +340,6 @@ class CursesGame():
 			continuous=key.upper()==key
 		return direction, continuous, item_left
 
-	def write_log(self, s):
-		with open("log.log", "a") as f:
-			f.write("%s\n" % s)
-
 	def init_colors(self):
 		curses.start_color()
 		curses.use_default_colors()
@@ -329,6 +354,7 @@ class CursesGame():
 		win2.addstr('WASD to move and keep moving\n')
 		win2.addstr('1 to 9 to drop marker\n')
 		win2.addstr('0 to remove markers\n')
+		win2.addstr('l to turn on/off the light\n')
 		win2.addstr('q to quit\n')
 		win2.refresh()
 		return win2 
@@ -363,6 +389,7 @@ class CursesGame():
 		player_running_direction=None # not stopping after doing one step
 		te=self.laby.render_text(x,y) # first time, we do it manually
 		old_running_last_step=datetime.datetime.now()
+		light=True
 		first_run=False
 		while cont:		  
 			time.sleep(0.01) # cpu usage 
@@ -399,22 +426,23 @@ class CursesGame():
 				new_object=False 
 
 # does the torch want to change its luminescence
-			new_date=datetime.datetime.now()
-			if (new_date-old_date).total_seconds()>0.3: 
-				old_date=new_date
-				old_light_level=light_level
-				light_level+=(random.randrange(0,2)*2-1)
-				if light_level<0:
-					light_level=0
-				if light_level>3:
-					light_level=3
-				if (light_level!=old_light_level):
-					refresh=True 
+			if not debug:
+				new_date=datetime.datetime.now()
+				if (new_date-old_date).total_seconds()>0.3: 
+					old_date=new_date
+					old_light_level=light_level
+					light_level+=(random.randrange(0,2)*2-1)
+					if light_level<0:
+						light_level=0
+					if light_level>3:
+						light_level=3
+					if (light_level!=old_light_level):
+						refresh=True 
 
 # after all these events, is there one that requires us to redo the display
 			if refresh:
 				win.clear()
-				li=self.laby.render_lights(x, y, x, y, light_level=light_level) 
+				li=self.laby.render_lights(x, y, x, y, light_level=light_level, light_on=light) 
 				self.laby.print_rendering(win, li, te)
 				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
 				win.refresh()
@@ -428,6 +456,9 @@ class CursesGame():
 
 			# key presseed
 			if key != '':
+				if key=='l':
+					light=not light
+					refresh=True
 				if key=='q':
 					cont=False # exit, would requires some sort of confirmation though
 				direction, is_player_running, item_left=self.check_key(key)
