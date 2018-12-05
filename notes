@@ -31,3 +31,12 @@ no more light flickering
 
 
 automatic save when quitting, r to reset map, save and load at quitting and reloading
+
+
+do a MP version.
+means : server to expose laby (which is a variable of the server ?)
+json web service to query laby object 
+and ncurse is a client
+working with tcp or unix socket
+
+and rest shoud be easy. we query the server to create a new laby. we have to destroy unused laby as well maybe. or a server just host one laby ? (one laby per port ?)

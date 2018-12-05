@@ -427,7 +427,7 @@ class BinaryGame:
 		print("1=north, 2=east, 4=south, 8=west. sum in binary is the directions you can take. q to quit")
 		while ((x!=laby.exit[1]) or (y!=laby.exit[0])) and cont:
 			dirs=laby.possible_directions(x, y, False) 
-			print(self.dir_to_bin(dirs))
+			print("possible directions: %d, distances: %0.2f" % (self.dir_to_bin(dirs), laby.get_distance_exist(x, y)))
 			dir_=input("what direction do you chose ? ")
 			if dir_=="q":
 				cont=False
