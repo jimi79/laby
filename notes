@@ -1,42 +1,31 @@
-we start from the beginning
-we build the string that is the map, to display it in one shot
-we will actually have an array of what is visible, with a color for each cell
-so that will be quick to render : print color of the array
-i should skip black cells though. while color = 0, increment column number.
-when we have a color, print column number if != 0
-is it worth it ? because i'm colored yeah i think
-or maybe i should change color only of the 4 cells around me
-which will actually be even tricker
-we'll have an array of 'ray'
+roadmap
 
+/ switch to numpy
+/ render light even if outside -> don't assume light is at the center of the matrice. still take account of walls. update light only if relevant. to test, render assuming player is always in 5/5. moving should change the point of view (won't be easy to move)
+/ try with fixed source light in 5,5
+/ try using RGB instead of fixed thing. work with that level thing
+/ try summing RGB...
+meaning working with layer of light, for which then we add a color. like level is from 1 to 6 (we lose a lot of values here). maybe we can use gray nuance from 1 to 6, then if >7, we apply rgb
+if red:it's 5*6^2 for level 5
+if blue:it's 5*6^1 for level 5
+sum
+and display outcome
 
-ok it's super tricky
+goal : have a glowing exit in blue...
 
-
-i take the map
-
-
-remove solution, or write it as a text file maybe
-display hint
-check min width
-move view distance to some other place
-add dropping items in places to remember where u've been
-take parameters in cli for the size 
-size will be squared, so only a '-s' is enough
-automatic save and restore (which is the matrice itself actually, and x and y maybe)
-traps ? then u spawn at the beginning, and the user would put warning to remember ? it seems annoying though
-
-blinking cursor
-no more light flickering
-
-
-automatic save when quitting, r to reset map, save and load at quitting and reloading
-
-
-do a MP version.
-means : server to expose laby (which is a variable of the server ?)
-json web service to query laby object 
-and ncurse is a client
-working with tcp or unix socket
-
-and rest shoud be easy. we query the server to create a new laby. we have to destroy unused laby as well maybe. or a server just host one laby ? (one laby per port ?)
+/ move laby to a server that would work on a unix socket first (or tcp if not possible)
+check flask actually, and a rest server maybe, somethg like that.
+/ make it possible to be on a tcp/ip socket
+/ for single player, if no server coordinate is entered in command line (no --ip --port), then use the lib without the layer.
+create some sort of abstraction level, so if there is a server or not, it's the same command
+/ try to connect two clients to see what happens
+/ server has to store the coordinates of the player somehow. could be stored per client connection
+like client a request a render assuming it's in 5,5
+	server store 5,5 as a player, for the client a
+b request a render assuming it's in 10,12 
+	server store 10,12 as a player, for the client b
+	render include the light from 5,5 (if that is useful, meaning we have to calculate distance from 5,5)
+a request render for 5,6
+	server update 5,6 for client a. so server knows there is one player in 5,6, and another one in 10,12
+	and render include 10,12 if relevant
+/ all player should reach exit. so now, the test to find out if someone win is asking the server if everybody is at the exit

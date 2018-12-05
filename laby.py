@@ -118,27 +118,43 @@ class Laby:
 						text[dy][dx]=marker 
 		return text
 
-	def render_light(self, x, y):
-		light=[[0 for j in range(0, self.max_distance*2+1)] for i in range(0, self.max_distance*2+1)]
+	def render_light(self, povx, povy, lx, ly):
+# render the light for one light source
+# povx povy: point of view
+# lx ly: light source
+
+
+		array_size=self.max_distance*2+1
+		light=[[0 for j in range(0, array_size)] for i in range(0, array_size)] 
+
+# first : distance between light and center. if too big, then no point of doing anythg
+
 		angle=0
-		array_x=self.max_distance
-		array_y=self.max_distance
-		light[array_y][array_x]=self.max_light-1
+		array_center_x=self.max_distance # relative center of the view
+		array_center_y=self.max_distance
+		array_abs_top=povx-self.max_distance # coordinate of the top left of the array, in absolute
+		array_abs_left=povy-self.max_distance # coordinate of the top left of the array, in absolute
+
+		#light[self.max_distance][self.max_distance]=self.max_light-1 # center of the array
 		while angle < math.pi*2:
 # calculation
 			path=True
-			distance=1
+			distance=0
 			while path and (distance <= self.max_distance): 
 				dx=math.sin(angle)*distance
 				dy=math.cos(angle)*distance
-				px=round(x+dx) # position in absolute 
-				py=round(y+dy) 
-				rx=round(array_x+dx) # position in the array of light, relative
-				ry=round(array_y+dy) # position in the array of light, relative
+				abs_x=round(lx+dx) # position in absolute 
+				abs_y=round(ly+dy) 
+
+				# i have to find out 
+				array_x=abs_x-array_abs_top
+				array_y=abs_y-array_abs_left 
+
 				#print("%d %d / %d %d" % (px, py, rx, ry))
-				path=self.is_digged(px, py)
-				if path:
-					light[ry][rx]=self.max_light-1-distance
+				path=self.is_digged(abs_x, abs_y)
+				if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
+					if path:
+						light[array_y][array_x]=self.max_light-1-distance
 # things i've tried here and didn't work
 # add light each time the ray come across the cell:
 # light+=max_light/100
@@ -372,7 +388,7 @@ class CursesGame():
 
 # after all these events, is there one that requires us to redo the display
 			if refresh:
-				li=self.laby.render_light(x,y) 
+				li=self.laby.render_light(x, y, x, y) 
 				self.laby.print_rendering(win, li, te, light_level)
 				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
 				win.refresh()
