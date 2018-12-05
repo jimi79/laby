@@ -29,9 +29,9 @@ class Cell:
 		self.marker=None
 
 class Laby:
-	def __init__(self):
-		self.height=300
-		self.width=300
+	def __init__(self, size=150):
+		self.height=size
+		self.width=size
 		self.max_light=13 #index in light_color
 		self.max_distance=5
 		self.exit=[-1,-1]
@@ -242,7 +242,6 @@ class Laby:
 		else:
 			return False, x, y
 
-
 def check_key(key):
 	direction=None
 	continuous=None
@@ -403,12 +402,58 @@ def debug():
 	#l.dig_v1()
 	print(l.possible_directions(10,10, False))
 
-def main2(win):
-	win.clear()
-	for i in range(0,15):
-		win.addstr("%d\n" % i, curses.color_pair(i))
-	win.getkey()
+class BinaryGame:
+
+	def __init__(self):
+		self.array_dir_to_bin={4:1, 1:2, 2:4, 3:8}
+		self.array_bin_to_dir={1:4, 2:1, 4:2, 8:3}
+
+	def dir_to_bin(self, dirs):
+		a=0
+		for dir_ in dirs:
+			a+=self.array_dir_to_bin[dir_]
+		return a
+
+	def play(self):
+		laby=Laby(10)
+		laby.dig_v1()
+		laby.save_map('laby.map')
+		x=0
+		y=0
+		cont=True
+		print("1=north, 2=east, 4=south, 8=west. sum in binary is the directions you can take. q to quit")
+		while ((x!=laby.exit[1]) or (y!=laby.exit[0])) and cont:
+			dirs=laby.possible_directions(x, y, False) 
+			print(self.dir_to_bin(dirs))
+			dir_=input("what direction do you chose ? ")
+			if dir_=="q":
+				cont=False
+			else:
+				idir=None
+				try:
+					idir=int(dir_)
+				except ValueError:
+					idir=None
+				if idir==None:
+					print("Unknown direction, 'q' to quit")
+				else:
+					idir=self.array_bin_to_dir[idir]
+					if not(idir in dirs):
+						print("Cannot go there")
+					else:
+						if idir==north:
+							y-=1
+						if idir==south:
+							y+=1
+						if idir==east:
+							x+=1
+						if idir==west:
+							x-=1
+		print("you reach the exit")
 
 
+#a=BinaryGame()
+#a.play()
 curses.wrapper(main)
 #debug()
+
