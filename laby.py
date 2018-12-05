@@ -17,6 +17,8 @@ import math
 import curses
 import time
 import datetime
+import argparse
+
 
 east=1
 south=2
@@ -243,10 +245,11 @@ class Laby:
 			return False, x, y
 
 class CursesGame(): 
-	def __init__():
-		pass
+	def __init__(self):
+		self.laby=None
+		self.size=300
 
-	def check_key(key):
+	def check_key(self, key):
 		direction=None
 		continuous=None
 		item_left=None
@@ -267,11 +270,11 @@ class CursesGame():
 			continuous=key.upper()==key
 		return direction, continuous, item_left
 
-	def write_log(s):
+	def write_log(self, s):
 		with open("log.log", "a") as f:
 			f.write("%s\n" % s)
 
-	def init_colors():
+	def init_colors(self):
 		curses.start_color()
 		curses.use_default_colors()
 
@@ -279,11 +282,7 @@ class CursesGame():
 		for i in range(0, len(light_colors)):
 			curses.init_pair(i+1, 0, light_colors[i]); 
 
-	def main(win):
-		init_curses()
-		key=""
-		win=curses.newwin(30, 40, 0, 0)
-		win.clear()
+	def add_help_window(self):
 		win2=curses.newwin(20, 40, 0, 41)
 		win2.addstr('wasd to move once\n')
 		win2.addstr('WASD to move and keep moving\n')
@@ -291,41 +290,47 @@ class CursesGame():
 		win2.addstr('0 to remove markers\n')
 		win2.addstr('q to quit\n')
 		win2.refresh()
+		return win2 
 
-		win.nodelay(True)
-		curses.curs_set(False)
-
-		win.clear;
+	def init_laby(self, win):
+		win.clear()
 		win.move(5,2);
 		win.addstr('please wait...');
 		win.refresh()
+		self.laby=Laby(self.size)
+		self.laby.dig_v1()
+		self.laby.save_map('laby.map')
+		win.clear()
 
-		laby=Laby()
-		laby.dig_v1()
-		laby.save_map('laby.map')
+	
+	def main(self, win):
+		self.init_colors()
+		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
+		key=""
+		win=curses.newwin(30, 40, 0, 0)
+		self.add_help_window() 
+		win.nodelay(True)
+		curses.curs_set(False) 
 		x=0
 		y=0
 		light_level=0
-		win.clear() 
 		cont=True # global loop
 		old_date=datetime.datetime.now() # last time the torch's light changed
 		new_object=False # a new object was placed or an object was removed, refresh the display
 		refresh=True # refresh the display
 		player_direction=None # player move (north, east, etc). may be impossible
 		player_running_direction=None # not stopping after doing one step
-		te=laby.render_text(x,y) # first time, we do it manually
+		te=self.laby.render_text(x,y) # first time, we do it manually
 		old_running_last_step=datetime.datetime.now()
 		first_run=False
 		while cont:		  
-			time.sleep(0.01) # cpu usage
-
-			if (x==laby.exit[1]) and (y==laby.exit[0]):
+			time.sleep(0.01) # cpu usage 
+			if (x==self.laby.exit[1]) and (y==self.laby.exit[0]):
 				cont=False # he wins 
-
 # is the player running
 			if player_running_direction!=None:
 				new_running_last_step=datetime.datetime.now()
-				if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.2): 
+				if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
 					old_running_last_step=new_running_last_step
 					player_direction=player_running_direction
 					first_run=False
@@ -334,7 +339,7 @@ class CursesGame():
 
 # does the player want to move
 			if player_direction!=None:
-				can_go, x, y=laby.can_go(x, y, player_direction)
+				can_go, x, y=self.laby.can_go(x, y, player_direction)
 				if can_go:
 					refresh=True
 				else:
@@ -342,13 +347,13 @@ class CursesGame():
 				if player_running_direction==None:
 					player_direction=None # if not running, stopping after one step
 				
-				te=laby.render_text(x,y) 
+				te=self.laby.render_text(x,y) 
 				refresh=True 
 				player_moved=False
 
 # did the player put an object on the map
 			if new_object:
-				te=laby.render_text(x,y) 
+				te=self.laby.render_text(x,y) 
 				refresh=True 
 				new_object=False 
 
@@ -367,9 +372,9 @@ class CursesGame():
 
 # after all these events, is there one that requires us to redo the display
 			if refresh:
-				li=laby.render_light(x,y) 
-				laby.print_rendering(win, li, te, light_level)
-				win.addstr("Distance to exit: %0.2f   " % (laby.get_distance_exist(x, y)))
+				li=self.laby.render_light(x,y) 
+				self.laby.print_rendering(win, li, te, light_level)
+				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
 				win.refresh()
 				refresh=False
 			key=""
@@ -383,7 +388,7 @@ class CursesGame():
 			if key != '':
 				if key=='q':
 					cont=False # exit, would requires some sort of confirmation though
-				direction, is_player_running, item_left=check_key(key)
+				direction, is_player_running, item_left=self.check_key(key)
 				if direction!=None:
 					if is_player_running:
 						player_running_direction=direction
@@ -394,7 +399,7 @@ class CursesGame():
 						player_direction=direction
 						player_running_direction=None
 				if item_left!=None:
-					laby.map[y][x].marker=item_left
+					self.laby.map[y][x].marker=item_left
 					new_object=True
 
 class BinaryGame:
@@ -447,9 +452,13 @@ class BinaryGame:
 		print("you reach the exit")
 
 
-#a=BinaryGame()
-#a.play()
-a=CursesGame()
-curses.wrapper(a.main)
+parser=argparse.ArugmentParser(description="Labyrinth")
+parser.add_arugment('--binary', action='store_cosnt', const=binary, help='play in binary')
+if binary:
+	a=BinaryGame()
+	a.play()
+else:
+	a=CursesGame()
+	curses.wrapper(a.main)
 #debug()
 
