@@ -284,13 +284,18 @@ def main(win):
 	win2=curses.newwin(20, 40, 0, 41)
 	win2.addstr('wasd to move once\n')
 	win2.addstr('WASD to move and keep moving\n')
-	win2.addstr('1 to 9 to drop markers\n')
+	win2.addstr('1 to 9 to drop marker\n')
 	win2.addstr('0 to remove markers\n')
 	win2.addstr('q to quit\n')
 	win2.refresh()
 
 	win.nodelay(True)
 	curses.curs_set(False)
+
+	win.clear;
+	win.move(5,2);
+	win.addstr('please wait...');
+	win.refresh()
 
 	laby=Laby()
 	laby.dig_v1()
