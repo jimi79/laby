@@ -68,6 +68,13 @@ class Laby:
 				dir.append(south)
 		return dir 
 
+	def get_view_height(self):
+		return (self.max_view_distance*2+1)
+
+	def get_view_width(self):
+		return (self.max_view_distance*2+1)*2
+		
+
 	def save_map(self, filename):
 		f=open(filename, "w")
 		for y in self.map:
@@ -92,7 +99,7 @@ class Laby:
 
 
 	def print_rendering(self, win, layout_light, layout_text):
-		win.clear()
+		win.move(0, 0)
 		for y in range(0, layout_light.shape[0]):
 			s=""
 			for x in range(0, layout_light.shape[1]):
@@ -349,7 +356,7 @@ class CursesGame():
 			curses.init_pair(i+1, 0, light_colors[i]); 
 
 	def add_help_window(self):
-		win2=curses.newwin(20, 40, 0, 55)
+		win2=curses.newwin(20, 30, 3, self.laby.get_view_width()+2)
 		win2.addstr('wasd to move once\n')
 		win2.addstr('WASD to move and keep moving\n')
 		win2.addstr('1 to 9 to drop marker\n')
@@ -360,7 +367,7 @@ class CursesGame():
 		return win2 
 
 	def init_laby(self, win):
-		win.clear()
+		win.erase()
 		win.move(5,2);
 		win.addstr('please wait...');
 		win.refresh()
@@ -368,14 +375,15 @@ class CursesGame():
 		self.laby.dig_v1()
 		#self.laby.dig_clear()
 		self.laby.save_map('laby.map')
-		win.clear() 
+		win.erase() 
 	
 	def main(self, win):
 		self.init_colors()
 		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
+		win.resize(self.laby.get_view_height()+1, self.laby.get_view_width()+1)
 		key=""
-		win=curses.newwin(50, 50, 0, 0)
-		self.add_help_window() 
+		win2=self.add_help_window() 
+		win2.refresh()
 		win.nodelay(True)
 		curses.curs_set(False) 
 		x=0
@@ -441,7 +449,6 @@ class CursesGame():
 
 # after all these events, is there one that requires us to redo the display
 			if refresh:
-				win.clear()
 				li=self.laby.render_lights(x, y, x, y, light_level=light_level, light_on=light) 
 				self.laby.print_rendering(win, li, te)
 				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
