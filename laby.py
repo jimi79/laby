@@ -43,7 +43,7 @@ class Laby:
 		self.width=size
 		self.max_light_level=12 #index in light_color
 		self.max_light_distance=5 # if you increment that, you got to increment the step for each ray 
-		self.max_view_distance=7 # if you increment that, you got to increment the step for each ray 
+		self.max_view_distance=12 # if you increment that, you got to increment the step for each ray 
 		self.ray_step=30
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
@@ -141,7 +141,8 @@ class Laby:
 				if (px>=0) and (px<self.width) and (py>=0) and (py<self.height):
 					marker=self.map[py][px].marker
 					if marker!=None:
-						text[dy][dx]=marker 
+						if text[dy][dx]!=None:
+							text[dy][dx]=marker 
 		return text
 
 	def render_view(self, povx, povy):
@@ -195,6 +196,7 @@ class Laby:
 
 		distance=math.sqrt((povx-lx)**2+(povy-ly)**2)
 		if distance < (self.max_view_distance+self.max_light_distance): 
+#if we look at a light that can emit to distance x, and we can see up to distance y, then we don't render anythg if sum is < distance of calculation
 			while angle < math.pi*2:
 				path=True
 				distance=0
@@ -243,8 +245,6 @@ class Laby:
 	def rgb(self, layer):
 		wlevel=(layer>=232)*layer/24
 		left=(layer<232)*(layer>=16)*layer-16 # we smply ignore the legaly colors
-		self.write_matrice_debug_file(layer, "layer.csv")
-		self.write_matrice_debug_file(left, "left.csv")
 		r1=left//36
 		lr1=r1/6
 		g1=(left-r1*36)//6
@@ -271,8 +271,6 @@ class Laby:
 				return result
 
 	def merge_layer_by_absence(self, layer1, layer2):
-		self.write_matrice_debug_file(layer1, 'layer1')
-		self.write_matrice_debug_file(layer1, 'layer2')
 		return (layer1*(layer2==16)+layer2*(layer2!=16)).astype(int)
 
 
@@ -288,7 +286,6 @@ class Laby:
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
 		view=self.render_view(povx, povy)
 		light_exit=light_exit*view
-		self.write_matrice_debug_file(light_exit)
 		self.apply_color_on_layer(light_exit, self.exit_colors)
 
 		if light_on:
@@ -444,11 +441,12 @@ class CursesGame():
 	def main(self, win):
 		self.init_colors()
 		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
-		win.resize(self.laby.get_view_height()+1, self.laby.get_view_width()+1)
+		win.resize(max(self.laby.get_view_height()+1, 10), max(self.laby.get_view_width()+1, 30))
 		key=""
 		win2=self.add_help_window() 
 		win2.refresh()
-		win.nodelay(True)
+		#win.nodelay(True)
+		curses.halfdelay(1)
 		curses.curs_set(False) 
 		x=0
 		y=0
@@ -464,7 +462,6 @@ class CursesGame():
 		light=True
 		first_run=False
 		while cont:		  
-			time.sleep(0.01) # cpu usage 
 			if (x==self.laby.exit[1]) and (y==self.laby.exit[0]):
 				cont=False # he wins 
 # is the player running
