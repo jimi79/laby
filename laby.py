@@ -41,13 +41,17 @@ class Laby:
 	def __init__(self, size=150):
 		self.height=size
 		self.width=size
-		self.max_light_level=13 #index in light_color
+		self.max_light_level=12 #index in light_color
 		self.max_light_distance=5 # if you increment that, you got to increment the step for each ray 
 		self.max_view_distance=7 # if you increment that, you got to increment the step for each ray 
 		self.ray_step=30
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
-		#self.light_colors=[0,232,233,234,235,52,88,130,172,214,220,226] # 13
+		self.torch_colors=[16,232,233,234,235,52,88,130,172,214,220,226] # 12 redish
+		self.exit_colors=[16,232,233,234,235,57,93,135,177,219,225,231] # 12 blueish, only rgb value (from 16 to 255)
+# init all colors, laby will handle colors
+# rgb is 16+ ((r*16)+g)*16+b
+# to decompose : value - 16. / 6, rest is blue. /6, rest is green, int value is red
 
 	def possible_directions(self, x, y, digging):
 # return east, south, west, north 
@@ -72,7 +76,10 @@ class Laby:
 		return (self.max_view_distance*2+1)
 
 	def get_view_width(self):
-		return (self.max_view_distance*2+1)*2
+		if debug:
+			return (self.max_view_distance*2+1)*3 # debug
+		else:
+			return (self.max_view_distance*2+1)*2
 		
 
 	def save_map(self, filename):
@@ -98,31 +105,35 @@ class Laby:
 		return math.sqrt(abs(self.exit[0]-y)**2 + abs(self.exit[1]-x)**2)
 
 
-	def print_rendering(self, win, layout_light, layout_text):
+	def print_rendering(self, win, layout_color, layout_text):
 		win.move(0, 0)
-		for y in range(0, layout_light.shape[0]):
+		for y in range(0, layout_color.shape[0]):
 			s=""
-			for x in range(0, layout_light.shape[1]):
-				light=layout_light[y, x]
-				if light<0:
-					light=0
+			for x in range(0, layout_color.shape[1]):
+				color=layout_color[y, x]
 				text=layout_text[y][x]
 				if text!=None:
 					if len(text)==1:
 						block=' %s' % text
 					else:
 						block=text
-					light=min(self.max_light_level-1, light) 
+					#light=min(self.max_light_level-1, light) 
 				else:
 					block="  "
 				#light_color=self.light_colors[light] 
-				win.addstr(block, curses.color_pair(light+1)) 
+			#	try:
+				#color=self.torch_colors[light]
+				win.addstr(block, curses.color_pair(color))
+				#win.addstr("%03d" % color)
+				#except:
+				#	raise Exception('error with light %20f' % light)
 			win.addstr("\n")
 
 	def render_text(self, x, y):
 # i need light. if light < max_light/2, i don't display the number. i actually should pick foreground color here, and leave background as black, and fill with that big white block
 # actually, i'll just display the number, and bump up the light
 		text=[[None for j in range(0, self.max_view_distance*2+1)] for i in range(0, self.max_view_distance*2+1)]
+		text[self.max_view_distance][self.max_view_distance]="<>"
 		for dy in range(0, self.max_view_distance*2+1):
 			for dx in range(0, self.max_view_distance*2+1):
 				px=x-self.max_view_distance+dx
@@ -210,27 +221,81 @@ class Laby:
 			light=light.round().astype(int)
 		return light
 
-	def write_matrice_debug_file(self, mat):
-		numpy.savetxt("debug.csv", mat, fmt="%3d")
+	def write_matrice_debug_file(self, mat, filename="debug.csv"):
+		numpy.savetxt(filename, mat, fmt="%3d")
+
+	def apply_color_on_layer(self, layer, array):
+		for y in range(0, layer.shape[0]):
+			for x in range(0, layer.shape[0]):
+				layer[y,x]=array[layer[y,x]]
+
+	def get_max_level_light(self, layer):
+		wlevel=(layer>=232)*layer
+		left=(layer<232)*(layer>=16)*layer-16 # we smply ignore the legaly colors
+		r1=left//36
+		g1=(left-r1*36)//6
+		b1=left % 6
+		level=numpy.maximum(r1/6, g1/6, b1/6)/6 
+		level=numpy.maximum(level, wlevel/24)/6 
+		return level
+	
+
+	def rgb(self, layer):
+		wlevel=(layer>=232)*layer/24
+		left=(layer<232)*(layer>=16)*layer-16 # we smply ignore the legaly colors
+		self.write_matrice_debug_file(layer, "layer.csv")
+		self.write_matrice_debug_file(left, "left.csv")
+		r1=left//36
+		lr1=r1/6
+		g1=(left-r1*36)//6
+		lg1=g1/6
+		b1=left % 6
+		lb1=b1/6
+		level=numpy.maximum(lr1, lg1, lb1)/6 
+		return r1, g1, b1, level, wlevel
+
+	def merge_layer_by_strength(self, layer1, layer2, strength_layer1_toward_layer2=0.5):
+		if numpy.max(layer1)==0:
+			write_log('1')
+			return layer2
+		else:
+			if numpy.max(layer2)==0: # i should go here
+				write_log('2')
+				return layer1
+			else: 
+				write_log('3')
+				level1=self.get_max_level_light(layer1) 
+				level2=self.get_max_level_light(layer2) 
+				result=(level1*strength_layer1_toward_layer2>level2)*layer1+(level1*strength_layer1_toward_layer2<=level2)*layer2 
+				result=result.astype(int)
+				return result
+
+	def merge_layer_by_absence(self, layer1, layer2):
+		self.write_matrice_debug_file(layer1, 'layer1')
+		self.write_matrice_debug_file(layer1, 'layer2')
+		return (layer1*(layer2==16)+layer2*(layer2!=16)).astype(int)
 
 
 	def render_lights(self, povx, povy, lx, ly, light_level=0, light_on=True):
 		if light_on:
 			light=self.render_light(povx, povy, lx, ly)
 			light=light-light_level # torch flicker 
+			# then we apply the color on that layer
+			light=numpy.maximum(0, light)
+			self.apply_color_on_layer(light, self.torch_colors)
+
+
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
 		view=self.render_view(povx, povy)
 		light_exit=light_exit*view
+		self.write_matrice_debug_file(light_exit)
+		self.apply_color_on_layer(light_exit, self.exit_colors)
 
 		if light_on:
-			light=numpy.maximum(light, light_exit) 
+			#light=numpy.maximum(light, light_exit)  # wrong
+			light=self.merge_layer_by_absence(light, light_exit)
 		else:
 			light=light_exit
-
-		if debug:
-			light_debug=self.render_light(povx, povy, 10, 10)
-			light=numpy.maximum(light, light_debug) 
-
 
 		return light
 		
@@ -247,14 +312,15 @@ class Laby:
 		for i in range(0, len(self.map)-1):
 			for j in range(0, len(self.map)-1):
 				self.map[i][j].digged=True
-		self.exit[0]=self.height-1
+		self.exit[0]=self.height-2
 		self.exit[1]=self.width-2
-		self.map[self.exit[0]][self.exit[1]].digged=True
+		write_log("%d %d" % (self.exit[0], self.exit[1]))
+		self.map[self.exit[1]][self.exit[0]].digged=True
 
 	def dig_v1(self):
 		if debug:
 			self.dig_clear() #debug
-			pass
+			return
 	# exit will be whatever wall to the east or south it reaches
 		x=0
 		y=0
@@ -281,7 +347,6 @@ class Laby:
 		self.map[y][x].digged=True
 		self.exit[0]=y
 		self.exit[1]=x
-		#self.map[y][x].marker='[]'
 
 	def dig_v2(self):
 		# we create n paths, but one will lead to the exit
@@ -351,13 +416,12 @@ class CursesGame():
 		curses.start_color()
 		curses.use_default_colors()
 
-		light_colors=[0,232,233,234,235,52,88,130,172,214,220,226,15] # 13
-		for i in range(0, len(light_colors)):
-			curses.init_pair(i+1, 0, light_colors[i]); 
+		for i in range(0, 256):
+			curses.init_pair(i, 0, i);
 
 	def add_help_window(self):
 		win2=curses.newwin(20, 30, 3, self.laby.get_view_width()+2)
-		win2.addstr('wasd to move once\n')
+		win2.addstr('wasd to move once\n', )
 		win2.addstr('WASD to move and keep moving\n')
 		win2.addstr('1 to 9 to drop marker\n')
 		win2.addstr('0 to remove markers\n')
