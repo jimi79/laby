@@ -141,7 +141,7 @@ class Laby:
 				if (px>=0) and (px<self.width) and (py>=0) and (py<self.height):
 					marker=self.map[py][px].marker
 					if marker!=None:
-						if text[dy][dx]!=None:
+						if text[dy][dx] is None:
 							text[dy][dx]=marker 
 		return text
 
