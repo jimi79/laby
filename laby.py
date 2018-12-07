@@ -448,6 +448,15 @@ class CursesGame():
 		#self.laby.dig_clear()
 		self.laby.save_map('laby.map')
 		win.erase() 
+
+	def set_player_auto(self, player_auto):
+		self.player_auto=player_auto
+		if self.player_auto:
+			self.set_hint('auto mode')
+		else:
+			self.set_hint('')
+
+
 	
 	def main(self, win):
 		self.init_colors()
@@ -470,7 +479,7 @@ class CursesGame():
 		player_running_direction=None # not stopping after doing one step
 		te=self.laby.render_text(x,y) # first time, we do it manually
 		old_running_last_step=datetime.datetime.now()
-		player_auto=None
+		self.player_auto=None
 		light=True
 		first_run=False
 		while cont:		  
@@ -501,7 +510,7 @@ class CursesGame():
 					refresh=True 
 					player_moved=False
 
-				if player_direction is None and player_auto:
+				if player_direction is None and self.player_auto:
 					new_running_last_step=datetime.datetime.now()
 					if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
 						old_running_last_step=new_running_last_step
@@ -519,8 +528,7 @@ class CursesGame():
 								x-=1
 								refresh=True
 						else:
-							player_auto=False 
-							self.set_hint('')
+							self.set_player_auto(False)
 
 # did the player put an object on the map
 				if new_object:
@@ -564,14 +572,11 @@ class CursesGame():
 					elif key=='q':
 						cont=False # exit, would requires some sort of confirmation though
 					elif key=='o':
-						player_auto=not player_auto # display that somewhere 
-						if player_auto:
-							self.set_hint('auto mode')
-						else:
-							self.set_hint('')
+						self.set_player_auto(not self.player_auto) # display that somewhere 
 					else:
 						direction, is_player_running, item_left=self.check_key(key)
 						if direction!=None:
+							self.set_player_auto(False)
 							if is_player_running:
 								player_running_direction=direction
 								player_direction=None
