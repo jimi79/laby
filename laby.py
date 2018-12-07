@@ -53,7 +53,7 @@ class Laby:
 # rgb is 16+ ((r*16)+g)*16+b
 # to decompose : value - 16. / 6, rest is blue. /6, rest is green, int value is red
 
-	def possible_directions(self, x, y, digging):
+	def get_possible_directions(self, x, y, digging=False):
 # return east, south, west, north 
 		dir=[] 
 		if x>0:
@@ -324,12 +324,12 @@ class Laby:
 		last_dir=None
 		while (x<self.width-1) and (y<self.height-1):
 			self.map[y][x].digged=True 
-			if last_dir==None or (random.randrange(1,2)==1):
-				dir=random.choice(self.possible_directions(x, y, True))
+			if last_dir==None or (random.randrange(1,3)==1):
+				dir=random.choice(self.get_possible_directions(x, y, True))
 			else:
 				dir=last_dir
-				if not(dir in self.possible_directions(x, y, True)):
-					dir=random.choice(self.possible_directions(x, y, True)) 
+				if not(dir in self.get_possible_directions(x, y, True)):
+					dir=random.choice(self.get_possible_directions(x, y, True)) 
 			last_dir=dir 
 			old_x=x
 			old_y=y
@@ -369,7 +369,7 @@ class Laby:
 				self.dig(x, y)
 
 	def can_go(self, x, y, direction): 
-		dirs=self.possible_directions(x, y, False)
+		dirs=self.get_possible_directions(x, y, False)
 		if direction in dirs:
 			if direction==north:
 				y-=1
@@ -387,6 +387,7 @@ class CursesGame():
 	def __init__(self):
 		self.laby=None
 		self.size=300
+		self.old_s=''
 
 	def check_key(self, key):
 		direction=None
@@ -423,9 +424,19 @@ class CursesGame():
 		win2.addstr('1 to 9 to drop marker\n')
 		win2.addstr('0 to remove markers\n')
 		win2.addstr('l to turn on/off the light\n')
+		win2.addstr('o to automatically walk to the exit\n')
 		win2.addstr('q to quit\n')
 		win2.refresh()
+		self.win2=win2
 		return win2 
+
+	def set_hint(self, s):
+		self.win2.move(10,0)
+		self.win2.addstr(''.join([' ' for i in range(0, len(self.old_s))]))
+		self.win2.move(10,0)
+		self.win2.addstr(s)
+		self.win2.refresh()
+		self.old_s=s
 
 	def init_laby(self, win):
 		win.erase()
@@ -459,89 +470,119 @@ class CursesGame():
 		player_running_direction=None # not stopping after doing one step
 		te=self.laby.render_text(x,y) # first time, we do it manually
 		old_running_last_step=datetime.datetime.now()
+		player_auto=None
 		light=True
 		first_run=False
 		while cont:		  
 			if (x==self.laby.exit[1]) and (y==self.laby.exit[0]):
 				cont=False # he wins 
+			else:
 # is the player running
-			if player_running_direction!=None:
-				new_running_last_step=datetime.datetime.now()
-				if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
-					old_running_last_step=new_running_last_step
-					player_direction=player_running_direction
-					first_run=False
-				else:
-					player_direction=None 
+				if player_running_direction!=None:
+					new_running_last_step=datetime.datetime.now()
+					if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
+						old_running_last_step=new_running_last_step
+						player_direction=player_running_direction
+						first_run=False
+					else:
+						player_direction=None 
 
 # does the player want to move
-			if player_direction!=None:
-				can_go, x, y=self.laby.can_go(x, y, player_direction)
-				if can_go:
-					refresh=True
-				else:
-					player_running_direction=None
-				if player_running_direction==None:
-					player_direction=None # if not running, stopping after one step
-				
-				te=self.laby.render_text(x,y) 
-				refresh=True 
-				player_moved=False
+				if player_direction!=None:
+					can_go, x, y=self.laby.can_go(x, y, player_direction)
+					if can_go:
+						refresh=True
+					else:
+						player_running_direction=None
+					if player_running_direction==None:
+						player_direction=None # if not running, stopping after one step
+					
+					te=self.laby.render_text(x,y) 
+					refresh=True 
+					player_moved=False
+
+				if player_direction is None and player_auto:
+					new_running_last_step=datetime.datetime.now()
+					if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
+						old_running_last_step=new_running_last_step
+						d=self.laby.get_possible_directions(x, y, False)
+						if x<self.laby.exit[1] and (east in d):
+							x+=1
+							refresh=True
+						elif y<self.laby.exit[0] and (south in d):
+								y+=1
+								refresh=True
+						elif y>self.laby.exit[0] and (north in d):
+							y-=1
+							refresh=True
+						elif x>self.laby.exit[1] and (west in d):
+								x-=1
+								refresh=True
+						else:
+							player_auto=False 
+							self.set_hint('')
 
 # did the player put an object on the map
-			if new_object:
-				te=self.laby.render_text(x,y) 
-				refresh=True 
-				new_object=False 
+				if new_object:
+					te=self.laby.render_text(x,y) 
+					refresh=True 
+					new_object=False 
 
 # does the torch want to change its luminescence
-			if not debug:
-				new_date=datetime.datetime.now()
-				if (new_date-old_date).total_seconds()>0.3: 
-					old_date=new_date
-					old_light_level=light_level
-					light_level+=(random.randrange(0,2)*2-1)
-					if light_level<0:
-						light_level=0
-					if light_level>3:
-						light_level=3
-					if (light_level!=old_light_level):
-						refresh=True 
+				if not debug:
+					new_date=datetime.datetime.now()
+					if (new_date-old_date).total_seconds()>0.3: 
+						old_date=new_date
+						old_light_level=light_level
+						light_level+=(random.randrange(0,2)*2-1)
+						if light_level<0:
+							light_level=0
+						if light_level>3:
+							light_level=3
+						if (light_level!=old_light_level):
+							refresh=True 
 
 # after all these events, is there one that requires us to redo the display
-			if refresh:
-				li=self.laby.render_lights(x, y, x, y, light_level=light_level, light_on=light) 
-				self.laby.print_rendering(win, li, te)
-				win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
-				win.refresh()
-				refresh=False
-			key=""
-			try:				 
+				if refresh:
+					li=self.laby.render_lights(x, y, x, y, light_level=light_level, light_on=light) 
+					self.laby.print_rendering(win, li, te)
+					win.addstr("Distance to exit: %0.2f   " % (self.laby.get_distance_exist(x, y)))
+					win.refresh()
+					refresh=False
+				key=""
+				try:				 
 #			pass
-				key = win.getkey()		 
-			except:
-				pass
+					key = win.getkey()		 
+				except:
+					pass
 
-			# key presseed
-			if key != '':
-				if key=='l':
-					light=not light
-					refresh=True
-				if key=='q':
-					cont=False # exit, would requires some sort of confirmation though
-				direction, is_player_running, item_left=self.check_key(key)
-				if direction!=None:
-					if is_player_running:
-						player_running_direction=direction
-						player_direction=None
-						old_running_last_step=datetime.datetime.now() # last time the player stepped while running, we initialse at now to match the before-while initialisation. Anyway first_run is at true
-						first_run=True # first run, because first time we don't wait the time delta
+				# key presseed
+				if key != '':
+					if key=='l':
+						light=not light
+						refresh=True
+					elif key=='q':
+						cont=False # exit, would requires some sort of confirmation though
+					elif key=='o':
+						player_auto=not player_auto # display that somewhere 
+						if player_auto:
+							self.set_hint('auto mode')
+						else:
+							self.set_hint('')
 					else:
-						player_direction=direction
-						player_running_direction=None
-				if item_left!=None:
-					self.laby.map[y][x].marker=item_left
-					new_object=True
+						direction, is_player_running, item_left=self.check_key(key)
+						if direction!=None:
+							if is_player_running:
+								player_running_direction=direction
+								player_direction=None
+								old_running_last_step=datetime.datetime.now() # last time the player stepped while running, we initialse at now to match the before-while initialisation. Anyway first_run is at true
+								first_run=True # first run, because first time we don't wait the time delta
+							else:
+								player_direction=direction
+								player_running_direction=None
+						if item_left!=None:
+							self.laby.map[y][x].marker=item_left
+							new_object=True
 
 class BinaryGame:
 
@@ -567,7 +608,7 @@ class BinaryGame:
 		cont=True
 		print("1=north, 2=east, 4=south, 8=west. sum in binary is the directions you can take. q to quit")
 		while ((x!=laby.exit[1]) or (y!=laby.exit[0])) and cont:
-			dirs=laby.possible_directions(x, y, False) 
+			dirs=laby.get_possible_directions(x, y, False) 
 			print("possible directions: %d, distances: %0.2f" % (self.dir_to_bin(dirs), laby.get_distance_exist(x, y)))
 			dir_=input("what direction do you chose ? ")
 			if dir_=="q":
