@@ -456,8 +456,6 @@ class CursesGame():
 		else:
 			self.set_hint('')
 
-
-	
 	def main(self, win):
 		self.init_colors()
 		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
