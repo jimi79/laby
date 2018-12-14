@@ -32,3 +32,5 @@ a request render for 5,6
 	server update 5,6 for client a. so server knows there is one player in 5,6, and another one in 10,12
 	and render include 10,12 if relevant
 / all player should reach exit. so now, the test to find out if someone win is asking the server if everybody is at the exit
+
+haz* algo sortie labyrinthe

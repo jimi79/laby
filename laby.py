@@ -43,7 +43,7 @@ class Laby:
 		self.width=size
 		self.max_light_level=12 #index in light_color
 		self.max_light_distance=5 # if you increment that, you got to increment the step for each ray 
-		self.max_view_distance=12 # if you increment that, you got to increment the step for each ray 
+		self.max_view_distance=7 # if you increment that, you got to increment the step for each ray 
 		self.ray_step=30
 		self.exit=[-1,-1]
 		self.map=[[Cell() for i in range(0, self.width)] for j in range(0, self.height)]
