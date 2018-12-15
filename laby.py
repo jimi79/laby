@@ -94,12 +94,24 @@ class Laby:
 			s+='\n'
 			f.write(s)
 
+	def debug_print_map(self):
+		s=""
+		for y in self.map:
+			for x in y:
+				if x.digged:
+					s+=" "
+				else:
+					s+="x"
+			s+='\n'
+		print(s)
+	
+
 	def is_digged(self, x, y):
 		oob=(x<0) or (x>=self.width) or (y<0) or (y>=self.height)
 		if oob:
-			return False
+			return False, True
 		else:
-			return self.map[y][x].digged
+			return self.map[y][x].digged, False
 
 	def get_distance_exist(self, x, y):
 		return math.sqrt(abs(self.exit[0]-y)**2 + abs(self.exit[1]-x)**2)
@@ -164,7 +176,7 @@ class Laby:
 				abs_y=round(povy+dy) 
 				array_x=abs_x-array_abs_top
 				array_y=abs_y-array_abs_left 
-				path=self.is_digged(abs_x, abs_y)
+				path, oob=self.is_digged(abs_x, abs_y)
 				if debug:
 					s+='%d %d ' % (abs_x, abs_y)
 				if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
@@ -207,7 +219,7 @@ class Laby:
 					abs_y=round(ly+dy) 
 					array_x=abs_x-array_abs_top
 					array_y=abs_y-array_abs_left 
-					path=self.is_digged(abs_x, abs_y) or distance<ignore_wall_length
+					path, oob=self.is_digged(abs_x, abs_y) or distance<ignore_wall_length
 					if array_x>=0 and array_x<array_size and array_y>=0 and array_y<array_size:
 						if path:
 							light[array_y, array_x]=self.max_light_level-1-distance
@@ -322,6 +334,7 @@ class Laby:
 		x=0
 		y=0
 		last_dir=None
+		print("1")
 		while (x<self.width-1) and (y<self.height-1):
 			self.map[y][x].digged=True 
 			if last_dir==None or (random.randrange(1,3)==1):
@@ -368,6 +381,69 @@ class Laby:
 				print("x=%d y=%d" % (x, y))
 				self.dig(x, y)
 
+	def dig_surface(self, x, y, nx, ny):
+		if nx<x:
+			a=nx
+			nx=x
+			x=a
+		if ny<y:
+			a=ny
+			ny=y
+			y=a 
+		for i in range(x, nx+1):
+			for j in range(y, ny+1):
+				self.dig(i, j) 
+
+	def dig_v3(self):
+		x=0
+		y=0
+		stack=[]
+		step=2
+		visited=[]
+		first=True
+		min_x=0
+		min_y=0
+		#while (x<self.width-1) and (y<self.height-1):
+		while (first) or (len(visited)>0):
+			first=False
+			unvisited=[]
+			for j in range(0,4):
+				if j==0:
+					nx=x+step
+					ny=y
+				if j==1:
+					nx=x-step
+					ny=y
+				if j==2:
+					nx=x
+					ny=y+step
+				if j==3:
+					nx=x
+					ny=y-step
+				digged,oob=self.is_digged(nx, ny)
+				if (not oob) and (not digged):
+					unvisited.append([nx, ny])
+
+			if len(unvisited)>0:
+				visiting=random.choice(unvisited)
+				visited.append(visiting)
+				nx=visiting[0]
+				ny=visiting[1]
+				self.dig_surface(x, y, nx, ny)
+				x=nx
+				y=ny
+				if x>min_x:
+					min_x=x
+				if y>min_y:
+					min_y=y 
+			else:
+				cell=visited.pop()
+				x=cell[0]
+				y=cell[1]
+		self.exit[0]=min_x
+		self.exit[1]=min_y 
+
+
 	def can_go(self, x, y, direction): 
 		dirs=self.get_possible_directions(x, y, False)
 		if direction in dirs:
@@ -384,10 +460,11 @@ class Laby:
 			return False, x, y
 
 class CursesGame(): 
-	def __init__(self):
+	def __init__(self, laby):
 		self.laby=None
 		self.size=300
 		self.old_s=''
+		self.laby=laby
 
 	def check_key(self, key):
 		direction=None
@@ -439,17 +516,6 @@ class CursesGame():
 		self.win2.refresh()
 		self.old_s=s
 
-	def init_laby(self, win):
-		win.erase()
-		win.move(5,2);
-		win.addstr('please wait...');
-		win.refresh()
-		self.laby=Laby(self.size)
-		self.laby.dig_v1()
-		#self.laby.dig_clear()
-		self.laby.save_map('laby.map')
-		win.erase() 
-
 	def set_player_auto(self, player_auto):
 		self.player_auto=player_auto
 		if self.player_auto:
@@ -466,7 +532,6 @@ class CursesGame():
 
 	def main(self, win):
 		self.init_colors()
-		self.init_laby(win) # will define a self.laby, win is sent to display 'please wait'
 		win.resize(max(self.laby.get_view_height()+1, 10), max(self.laby.get_view_width()+1, 30))
 		key=""
 		win2=self.add_help_window() 
@@ -634,10 +699,11 @@ class CursesGame():
 
 class BinaryGame:
 
-	def __init__(self):
+	def __init__(self, laby):
 		self.array_dir_to_bin={4:1, 1:2, 2:4, 3:8}
 		self.array_bin_to_dir={1:4, 2:1, 4:2, 8:3}
 		self.size=10
+		self.laby=laby
 
 	def dir_to_bin(self, dirs):
 		a=0
@@ -646,10 +712,7 @@ class BinaryGame:
 		return a
 
 	def play(self):
-		laby=Laby(self.size)
-		print("please wait, building the map...")
-		laby.dig_v1()
-		print("done")
+		laby=self.laby
 		laby.save_map('laby.map')
 		x=0
 		y=0
@@ -687,18 +750,34 @@ class BinaryGame:
 		else:
 			print("you quit")
 
+def test():
+	laby=Laby(10)
+	laby.dig_v3()
+
 
 parser=argparse.ArgumentParser(description="Labyrinth")
 parser.add_argument('--binary', action='store_const', dest='binary', help='play in binary', const=True)
+parser.add_argument('--dig', help='digging method: 1, 2 or 3', type=int, default=1)
+parser.add_argument('--test', action='store_const', dest='test', help="programmer's test", const=True)
 parser.add_argument('--size', help='size of the laby (default 150)', type=int, default=150)
 args=parser.parse_args()
-if args.binary:
-	a=BinaryGame()
-	a.size=args.size
-	a.play()
+
+if args.test:
+	test()
 else:
-	a=CursesGame()
-	a.size=args.size
-	curses.wrapper(a.main)
-#debug()
+	print("please wait, building labyrinth")
+	laby=Laby(args.size)
+	if args.dig==1:
+		laby.dig_v1()
+	if args.dig==2:
+		laby.dig_v2()
+	if args.dig==3:
+		laby.dig_v3()
+	laby.save_map('laby.map')
+	if args.binary:
+		a=BinaryGame(laby)
+		a.play()
+	else:
+		a=CursesGame(laby)
+		curses.wrapper(a.main)
 
