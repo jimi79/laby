@@ -84,10 +84,12 @@ class Laby:
 
 	def save_map(self, filename):
 		f=open(filename, "w")
-		for y in self.map:
+		for y in range(0, self.height):
 			s=""
-			for x in y:
-				if x.digged:
+			for x in range(0, self.width):
+				if self.exit[1]==x and self.exit[0]==y:
+					s+="E"
+				elif self.map[y][x].digged:
 					s+=" "
 				else:
 					s+="x"
@@ -294,7 +296,6 @@ class Laby:
 			light=numpy.maximum(0, light)
 			self.apply_color_on_layer(light, self.torch_colors)
 
-
 		light_exit=self.render_light(povx, povy, self.exit[1], self.exit[0], ignore_wall_length=0)
 		view=self.render_view(povx, povy)
 		light_exit=light_exit*view
@@ -401,8 +402,7 @@ class Laby:
 		step=2
 		visited=[]
 		first=True
-		min_x=0
-		min_y=0
+		max_len=0
 		#while (x<self.width-1) and (y<self.height-1):
 		while (first) or (len(visited)>0):
 			first=False
@@ -432,16 +432,14 @@ class Laby:
 				self.dig_surface(x, y, nx, ny)
 				x=nx
 				y=ny
-				if x>min_x:
-					min_x=x
-				if y>min_y:
-					min_y=y 
+				if len(visited)>max_len:
+					max_len=len(visited)
+					self.exit[1]=x
+					self.exit[0]=y 
 			else:
 				cell=visited.pop()
 				x=cell[0]
 				y=cell[1]
-		self.exit[0]=min_x
-		self.exit[1]=min_y 
 
 
 	def can_go(self, x, y, direction): 
