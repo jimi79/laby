@@ -335,7 +335,6 @@ class Laby:
 		x=0
 		y=0
 		last_dir=None
-		print("1")
 		while (x<self.width-1) and (y<self.height-1):
 			self.map[y][x].digged=True 
 			if last_dir==None or (random.randrange(1,3)==1):
