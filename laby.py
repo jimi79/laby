@@ -691,7 +691,10 @@ class CursesGame():
 								player_direction=direction
 								player_running_direction=None
 						if item_left!=None:
-							self.laby.map[y][x].marker=item_left
+							if item_left=="":
+								self.laby.map[y][x].marker=None
+							else:
+								self.laby.map[y][x].marker=item_left
 							new_object=True
 
 class BinaryGame:
