@@ -358,29 +358,6 @@ class Laby:
 		self.exit[0]=y
 		self.exit[1]=x
 
-	def dig_v2(self):
-		# we create n paths, but one will lead to the exit
-		paths=[]
-		paths.append([0, 0, self.height - 1, self.width - 1]) # no
-		for i in range(0,5):
-			paths.append([random.randrange(1, self.height - 1), random.randrange(1, self.width - 1), random.randrange(1, self.height - 1), random.randrange(1, self.width - 1)]) 
-		for path in paths:
-			y=path[0]
-			x=path[0]
-			self.dig(x, y)
-			print("--------")
-			while ((y!=path[2]) and (x!=path[3])):
-				dx=path[3]-x
-				dy=path[2]-y
-				print("dx=%d dy=%d" % (dx, dy))
-				print("x=%d y=%d" % (x, y))
-				if abs(dx) > abs(dy):
-					x+=dx//abs(dx)
-				else:
-					y+=dy//abs(dy)
-				print("x=%d y=%d" % (x, y))
-				self.dig(x, y)
-
 	def dig_surface(self, x, y, nx, ny):
 		if nx<x:
 			a=nx
@@ -394,7 +371,7 @@ class Laby:
 			for j in range(y, ny+1):
 				self.dig(i, j) 
 
-	def dig_v3(self):
+	def dig_v2(self):
 		x=0
 		y=0
 		stack=[]
@@ -752,12 +729,12 @@ class BinaryGame:
 
 def test():
 	laby=Laby(10)
-	laby.dig_v3()
+	laby.dig_v2()
 
 
 parser=argparse.ArgumentParser(description="Labyrinth")
 parser.add_argument('--binary', action='store_const', dest='binary', help='play in binary', const=True)
-parser.add_argument('--dig', help='digging method: 1, 2 or 3', type=int, default=1)
+parser.add_argument('--dig', help='digging method: 1 or 2', type=int, default=1)
 parser.add_argument('--test', action='store_const', dest='test', help="programmer's test", const=True)
 parser.add_argument('--size', help='size of the laby (default 150)', type=int, default=150)
 args=parser.parse_args()
@@ -771,8 +748,6 @@ else:
 		laby.dig_v1()
 	if args.dig==2:
 		laby.dig_v2()
-	if args.dig==3:
-		laby.dig_v3()
 	laby.save_map('laby.map')
 	if args.binary:
 		a=BinaryGame(laby)
