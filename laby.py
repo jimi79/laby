@@ -35,6 +35,7 @@ class Cell:
 	def __init__(self):
 		self.digged = False
 		self.marker = None
+		self.path = False
 
 class Laby:
 	def __init__(self, size=150):
@@ -80,7 +81,6 @@ class Laby:
 		else:
 			return (self.max_view_distance*2+1)*2
 		
-
 	def save_map(self, filename):
 		f=open(filename, "w")
 		for y in range(0, self.height):
@@ -88,6 +88,8 @@ class Laby:
 			for x in range(0, self.width):
 				if self.exit[1]==x and self.exit[0]==y:
 					s+="E"
+				elif self.map[y][x].path:
+					s+="."
 				elif self.map[y][x].digged:
 					s+=" "
 				else:
@@ -559,7 +561,7 @@ class CursesGame():
 				if self.player_auto:
 					if solution == None:
 						solution = Solve().solve(self.laby)
-						step = 0
+						step = 0 
 					new_running_last_step=datetime.datetime.now()
 					if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
 						old_running_last_step=new_running_last_step
@@ -683,7 +685,6 @@ class BinaryGame:
 
 	def play(self):
 		laby=self.laby
-		laby.save_map('laby.map')
 		x=0
 		y=0
 		cont=True
@@ -718,7 +719,7 @@ class BinaryGame:
 		if cont:
 			print("you reach the exit")
 		else:
-			print("you quit")
+			print("you quit") 
 
 def test():
 	laby=Laby(10)

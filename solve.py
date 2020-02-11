@@ -8,7 +8,8 @@ class Solve():
 
 	def solve(self, laby):
 		seen = [[False for x in range(0, laby.width)] for y in range(0, laby.height)]
-		directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+		#directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (1, 1), (1, -1), (-1, -1), (-1, 1)]
+		directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
 		paths = [[(0, 0)]]
 		good_path = None
 		while (good_path == None):
@@ -29,7 +30,8 @@ class Solve():
 									new_paths.append(path + [(y, x)])
 									seen[y][x] = True
 
-			paths = new_paths
-
+			paths = new_paths 
+		for path in good_path: 
+			laby.map[path[0]][path[1]].path = True
 		return good_path
 

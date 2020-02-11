@@ -18,11 +18,12 @@ else:
 		laby.dig_v1()
 	if args.dig==2:
 		laby.dig_v2()
-	laby.save_map('laby.map')
 	if args.binary:
+		laby.save_map('laby.map')
 		a=BinaryGame(laby)
 		a.play()
 	else:
 		a=CursesGame(laby)
 		curses.wrapper(a.main)
+		laby.save_map('laby.map')
 
