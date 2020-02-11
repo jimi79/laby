@@ -475,8 +475,7 @@ class CursesGame():
 		win2.addstr('1 to 9 to drop marker\n')
 		win2.addstr('0 to remove markers\n')
 		win2.addstr('l to turn on/off the light\n')
-		win2.addstr('o to go toward the exit\n')
-		win2.addstr('p to go left and keep going\n')
+		win2.addstr('o go to the exit\n')
 		win2.addstr('q to quit\n')
 		win2.refresh()
 		self.win2=win2
@@ -494,13 +493,6 @@ class CursesGame():
 		self.player_auto=player_auto
 		if self.player_auto:
 			self.set_hint('auto mode')
-		else:
-			self.set_hint('')
-
-	def set_player_auto2(self, player_auto2):
-		self.player_auto2=player_auto2
-		if self.player_auto2:
-			self.set_hint('auto2 mode')
 		else:
 			self.set_hint('')
 
@@ -526,8 +518,6 @@ class CursesGame():
 		te=self.laby.render_text(x,y) # first time, we do it manually
 		old_running_last_step=datetime.datetime.now()
 		self.player_auto=None
-		self.player_auto2=None
-		self.player_auto2_last_direction=None
 		light=True
 		first_run=False
 		while cont:		  
@@ -572,38 +562,6 @@ class CursesGame():
 						else:
 							self.set_player_auto(False)
 
-				if self.player_auto2:
-					direction_auto2=self.player_auto2_last_direction
-					d=self.laby.get_possible_directions(x, y)
-					if self.player_auto2_last_direction is None:
-						direction_auto2=min(d)
-					else:
-						a=direction_auto2 - 1
-						if a<1:
-							a=4
-						while (not(a in d)):
-							a+=1
-							if (a>4):
-								a=1
-						direction_auto2=a
-
-					self.player_auto2_last_direction=direction_auto2
-					if direction_auto2==east:
-						x+=1
-						refresh=True
-					elif direction_auto2==south:
-						y+=1
-						refresh=True
-					elif direction_auto2==west:
-						x-=1
-						refresh=True
-					elif direction_auto2==north:
-						y-=1
-						refresh=True
-					else:
-						self.set_player_auto2=False 
-
-
 # did the player put an object on the map
 				if new_object:
 					te=self.laby.render_text(x,y) 
@@ -647,13 +605,10 @@ class CursesGame():
 						cont=False # exit, would requires some sort of confirmation though
 					elif key=='o':
 						self.set_player_auto(not self.player_auto)
-					elif key=='p':
-						self.set_player_auto2(not self.player_auto2) 
 					else:
 						direction, is_player_running, item_left=self.check_key(key)
 						if direction!=None:
 							self.set_player_auto(False)
-							self.set_player_auto2(False)
 							if is_player_running:
 								player_running_direction=direction
 								player_direction=None
