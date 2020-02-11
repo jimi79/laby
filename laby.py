@@ -97,6 +97,24 @@ class Laby:
 			s+='\n'
 			f.write(s)
 
+	def save_map_256(self, filename):
+		f=open(filename, "w")
+		for y in range(0, self.height):
+			s=""
+			for x in range(0, self.width):
+				if self.exit[1]==x and self.exit[0]==y:
+					s+="\033[48;5;19m  "
+				elif self.map[y][x].path:
+					s+="\033[48;5;92m  "
+				elif self.map[y][x].digged:
+					s+="\033[48;5;235m  "
+				else:
+					s+="\033[48;5;250m  "
+			s+="\033[0m\n"
+			f.write(s)
+
+
+
 	def debug_print_map(self):
 		s=""
 		for y in self.map:

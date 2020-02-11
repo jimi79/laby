@@ -26,4 +26,5 @@ else:
 		a=CursesGame(laby)
 		curses.wrapper(a.main)
 		laby.save_map('laby.map')
+		laby.save_map_256('laby_256.map')
 

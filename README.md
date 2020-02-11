@@ -22,6 +22,7 @@ The distance to the exit is shown below the map.
 When the exit is reached, the program exits. You can also quit with letter q.
 When you restart, a new map is generated.
 
-A file, laby.map, is generated once you start the game with the map of the cave.
+A file, laby.map, is generated once you finish the game (or at start in binary mode).
+A colored version is also generated, laby_256.map. i suggest less -R -S laby_256.map to see it.
 
 You can also change settings, check with -h options
