@@ -1,3 +1,5 @@
+To start: run.py
+
 This is a top down view labyrinth.
 You're in some cave, and have to find an exit somewhere.
 

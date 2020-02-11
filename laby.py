@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 #                north                 ^
 #             [                        |  
 #             [x x x x x x]            | height  
@@ -19,6 +17,7 @@ import time
 import datetime
 import argparse
 import numpy
+from solve import *
 
 debug=False
 
@@ -34,8 +33,8 @@ def write_log(s):
 
 class Cell:
 	def __init__(self):
-		self.digged=False
-		self.marker=None
+		self.digged = False
+		self.marker = None
 
 class Laby:
 	def __init__(self, size=150):
@@ -415,8 +414,7 @@ class Laby:
 			else:
 				cell=visited.pop()
 				x=cell[0]
-				y=cell[1]
-
+				y=cell[1] 
 
 	def can_go(self, x, y, direction): 
 		dirs=self.get_possible_directions(x, y, False)
@@ -505,6 +503,7 @@ class CursesGame():
 			self.set_hint('')
 
 	def main(self, win):
+		solution = None
 		self.init_colors()
 		win.resize(max(self.laby.get_view_height()+1, 10), max(self.laby.get_view_width()+1, 30))
 		key=""
@@ -557,27 +556,21 @@ class CursesGame():
 					refresh=True 
 					player_moved=False
 
-				if self.player_auto: #TODO a function here
+				if self.player_auto:
+					if solution == None:
+						solution = Solve().solve(self.laby)
+						step = 0
 					new_running_last_step=datetime.datetime.now()
 					if first_run or ((new_running_last_step-old_running_last_step).total_seconds()>0.1): 
 						old_running_last_step=new_running_last_step
-						d=self.laby.get_possible_directions(x, y, False)
-						if x<self.laby.exit[1] and (east in d):
-							x+=1
-							refresh=True
-						elif y<self.laby.exit[0] and (south in d):
-								y+=1
-								refresh=True
-						elif y>self.laby.exit[0] and (north in d):
-							y-=1
-							refresh=True
-						elif x>self.laby.exit[1] and (west in d):
-								x-=1
-								refresh=True
+						if step < len(solution):
+							y, x = solution[step]
+							step = step + 1
+							refresh = True
 						else:
 							self.set_player_auto(False)
 
-				if self.player_auto2: # TODO a function here
+				if self.player_auto2:
 					direction_auto2=self.player_auto2_last_direction
 					d=self.laby.get_possible_directions(x, y)
 					if self.player_auto2_last_direction is None:
@@ -653,7 +646,7 @@ class CursesGame():
 					elif key=='o':
 						self.set_player_auto(not self.player_auto)
 					elif key=='p':
-						self.set_player_auto2(not self.player_auto2)
+						self.set_player_auto2(not self.player_auto2) 
 					else:
 						direction, is_player_running, item_left=self.check_key(key)
 						if direction!=None:
@@ -730,29 +723,4 @@ class BinaryGame:
 def test():
 	laby=Laby(10)
 	laby.dig_v2()
-
-
-parser=argparse.ArgumentParser(description="Labyrinth")
-parser.add_argument('--binary', action='store_const', dest='binary', help='play in binary', const=True)
-parser.add_argument('--dig', help='digging method: 1 or 2', type=int, default=1)
-parser.add_argument('--test', action='store_const', dest='test', help="programmer's test", const=True)
-parser.add_argument('--size', help='size of the laby (default 150)', type=int, default=150)
-args=parser.parse_args()
-
-if args.test:
-	test()
-else:
-	print("please wait, building labyrinth")
-	laby=Laby(args.size)
-	if args.dig==1:
-		laby.dig_v1()
-	if args.dig==2:
-		laby.dig_v2()
-	laby.save_map('laby.map')
-	if args.binary:
-		a=BinaryGame(laby)
-		a.play()
-	else:
-		a=CursesGame(laby)
-		curses.wrapper(a.main)
 
