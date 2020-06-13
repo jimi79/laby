@@ -13,7 +13,7 @@ class Solve():
 		paths = [[(0, 0)]]
 		good_path = None
 		while (good_path == None):
-			if len(paths) > 1000:
+			if len(paths) > self.max_iterations:
 				raise Exception("Lots of paths possible")
 			new_paths = []
 			for path in paths:
