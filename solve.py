@@ -6,11 +6,11 @@ class Solve():
 	def add(self, position, dir_):
 		return position[0] + dir_[0], position[1] + dir_[1]
 
-	def solve(self, laby):
+	def solve(self, laby, x, y):
 		seen = [[False for x in range(0, laby.width)] for y in range(0, laby.height)]
 		#directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (1, 1), (1, -1), (-1, -1), (-1, 1)]
 		directions = [(-1, 0), (0, -1), (1, 0), (0, 1)]
-		paths = [[(0, 0)]]
+		paths = [[(x, y)]]
 		good_path = None
 		while (good_path == None):
 			if len(paths) > self.max_iterations:
